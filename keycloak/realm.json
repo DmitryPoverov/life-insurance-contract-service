@@ -1,0 +1,66 @@
+{
+  "realm": "insurance",
+  "enabled": true,
+  "sslRequired": "none",
+  "accessTokenLifespan": 3600,
+  "roles": {
+    "realm": [
+      { "name": "customer" },
+      { "name": "underwriter" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "insurance-app",
+      "defaultClientScopes": ["basic", "roles"],
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false
+    }
+  ],
+  "users": [
+    {
+      "id": "11111111-1111-1111-1111-111111111111",
+      "username": "customer1",
+      "email": "customer1@example.com",
+      "firstName": "Customer",
+      "lastName": "One",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        { "type": "password", "value": "customer1", "temporary": false }
+      ],
+      "realmRoles": ["customer"]
+    },
+    {
+      "id": "22222222-2222-2222-2222-222222222222",
+      "username": "customer2",
+      "email": "customer2@example.com",
+      "firstName": "Customer",
+      "lastName": "Two",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        { "type": "password", "value": "customer2", "temporary": false }
+      ],
+      "realmRoles": ["customer"]
+    },
+    {
+      "id": "33333333-3333-3333-3333-333333333333",
+      "username": "underwriter1",
+      "email": "underwriter1@example.com",
+      "firstName": "Underwriter",
+      "lastName": "Three",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [
+        { "type": "password", "value": "underwriter1", "temporary": false }
+      ],
+      "realmRoles": ["underwriter"]
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+name: life-insurance
+
+services:
+  postgres-insurance:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${INSURANCE_DB_NAME}
+      POSTGRES_USER: ${INSURANCE_DB_USER}
+      POSTGRES_PASSWORD: ${INSURANCE_DB_PASSWORD}
+    ports:
+      - "${INSURANCE_DB_PORT}:5432"
+    volumes:
+      - postgres-insurance-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.3
+    command: [ "start-dev", "--import-realm" ]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HOSTNAME: http://localhost:${KEYCLOAK_PORT}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "false"
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "${KEYCLOAK_PORT}:8080"
+    volumes:
+      - ./keycloak/realm.json:/opt/keycloak/data/import/realm.json:ro
+    healthcheck:
+      test: [ "CMD", "bash", "-c", "{ printf 'HEAD /health/ready HTTP/1.0\\r\\n\\r\\n' >&0; grep 'HTTP/1.0 200'; } 0<>/dev/tcp/localhost/9000" ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  postgres-registry:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${REGISTRY_DB_NAME}
+      POSTGRES_USER: ${REGISTRY_DB_USER}
+      POSTGRES_PASSWORD: ${REGISTRY_DB_PASSWORD}
+    ports:
+      - "${REGISTRY_DB_PORT}:5432"
+    volumes:
+      - postgres-registry-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+  insurance-service:
+    build:
+      context: .
+      dockerfile: insurance-service/Dockerfile
+    environment:
+      SERVER_PORT: 8080
+      KEYCLOAK_ISSUER_URI: http://localhost:${KEYCLOAK_PORT}/realms/insurance
+      KEYCLOAK_JWK_SET_URI: http://keycloak:8080/realms/insurance/protocol/openid-connect/certs
+    ports:
+      - "${INSURANCE_SERVICE_PORT}:8080"
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+volumes:
+  postgres-insurance-data:
+  postgres-registry-data:

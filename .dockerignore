@@ -1,0 +1,8 @@
+.git
+.gradle
+.idea
+**/build
+**/.gradle
+.env
+docker-compose.yml
+keycloak
