@@ -5,17 +5,22 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/applications")
 public class ApplicationController {
+
+    private static final String UNDERWRITER_AUTHORITY = "ROLE_UNDERWRITER";
 
     private final ApplicationService applicationService;
     private final ApplicationMapper applicationMapper;
@@ -29,5 +34,19 @@ public class ApplicationController {
         Application application = applicationService.create(authentication.getName(), request);
         return ResponseEntity.created(URI.create("/api/v1/applications/" + application.getId()))
                 .body(applicationMapper.toResponse(application));
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'UNDERWRITER')")
+    ResponseEntity<ApplicationResponse> getById(@PathVariable UUID id, Authentication authentication) {
+        Application application = isUnderwriter(authentication)
+                ? applicationService.getAnyById(id)
+                : applicationService.getOwnById(id, authentication.getName());
+        return ResponseEntity.ok(applicationMapper.toResponse(application));
+    }
+
+    private boolean isUnderwriter(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(authority -> UNDERWRITER_AUTHORITY.equals(authority.getAuthority()));
     }
 }

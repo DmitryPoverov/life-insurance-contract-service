@@ -6,14 +6,20 @@ import io.github.dmitrypoverov.insurance.support.IntegrationTest;
 import io.github.dmitrypoverov.insurance.support.TestJwtTokens;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
 class ApplicationControllerTest extends IntegrationTest {
 
     private static final String CUSTOMER_SUBJECT = "11111111-1111-1111-1111-111111111111";
+    private static final String OTHER_CUSTOMER_SUBJECT = "22222222-2222-2222-2222-222222222222";
     private static final String UNDERWRITER_SUBJECT = "33333333-3333-3333-3333-333333333333";
+
+    @Autowired
+    private ApplicationRepository applicationRepository;
 
     @Test
     void create_withCustomerToken_returnsCreatedWithCalculatedPremium() {
@@ -93,6 +99,79 @@ class ApplicationControllerTest extends IntegrationTest {
                 .expectStatus().isBadRequest()
                 .expectBody()
                 .jsonPath("$.code").isEqualTo("AGE_NOT_ELIGIBLE");
+    }
+
+    @Test
+    void getById_ownApplication_returnsOk() {
+        Application application = saveApplicationOf(CUSTOMER_SUBJECT);
+
+        client.get()
+                .uri("/api/v1/applications/{id}", application.getId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(CUSTOMER_SUBJECT, "customer"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.id").isEqualTo(application.getId().toString())
+                .jsonPath("$.applicantSubject").isEqualTo(CUSTOMER_SUBJECT);
+    }
+
+    @Test
+    void getById_otherCustomersApplication_returnsNotFound() {
+        Application application = saveApplicationOf(CUSTOMER_SUBJECT);
+
+        client.get()
+                .uri("/api/v1/applications/{id}", application.getId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(OTHER_CUSTOMER_SUBJECT, "customer"))
+                .exchange()
+                .expectStatus().isNotFound()
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("NOT_FOUND");
+    }
+
+    @Test
+    void getById_underwriter_returnsOk() {
+        Application application = saveApplicationOf(CUSTOMER_SUBJECT);
+
+        client.get()
+                .uri("/api/v1/applications/{id}", application.getId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.id").isEqualTo(application.getId().toString());
+    }
+
+    @Test
+    void getById_nonExistentId_returnsNotFound() {
+        client.get()
+                .uri("/api/v1/applications/{id}", UUID.randomUUID())
+                .header(HttpHeaders.AUTHORIZATION, bearer(CUSTOMER_SUBJECT, "customer"))
+                .exchange()
+                .expectStatus().isNotFound()
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("NOT_FOUND");
+    }
+
+    @Test
+    void getById_malformedId_returnsBadRequest() {
+        client.get()
+                .uri("/api/v1/applications/not-a-uuid")
+                .header(HttpHeaders.AUTHORIZATION, bearer(CUSTOMER_SUBJECT, "customer"))
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("MALFORMED_REQUEST");
+    }
+
+    private Application saveApplicationOf(String applicantSubject) {
+        return applicationRepository.save(Application.submit(
+                applicantSubject,
+                "Ivan Petrov",
+                LocalDate.now().minusYears(36).minusDays(1),
+                "AB1234567",
+                new BigDecimal("1000000.00"),
+                10,
+                new BigDecimal("65000.00")));
     }
 
     private String bearer(String subject, String... roles) {

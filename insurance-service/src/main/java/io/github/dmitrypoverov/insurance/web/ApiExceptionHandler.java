@@ -1,6 +1,7 @@
 package io.github.dmitrypoverov.insurance.web;
 
 import io.github.dmitrypoverov.insurance.applications.ApplicantAgeNotEligibleException;
+import io.github.dmitrypoverov.insurance.applications.ApplicationNotFoundException;
 import io.github.dmitrypoverov.insurance.applications.ApplicationStatusTransitionException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.http.*;
@@ -28,6 +29,13 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             AccessDeniedException exception,
             WebRequest request) {
         return problem(exception, HttpStatus.FORBIDDEN, ErrorCode.ACCESS_DENIED, "Access is denied",
+                request);
+    }
+
+    @ExceptionHandler(ApplicationNotFoundException.class)
+    @Nullable ResponseEntity<Object> handleApplicationNotFound(
+            ApplicationNotFoundException exception, WebRequest request) {
+        return problem(exception, HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND, exception.getMessage(),
                 request);
     }
 

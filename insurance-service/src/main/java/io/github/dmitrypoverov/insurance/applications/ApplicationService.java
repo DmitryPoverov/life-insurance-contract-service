@@ -1,12 +1,14 @@
 package io.github.dmitrypoverov.insurance.applications;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -36,5 +38,18 @@ public class ApplicationService {
                         premium);
 
         return applicationRepository.save(application);
+    }
+
+    @Transactional(readOnly = true)
+    public Application getOwnById(UUID id, String applicantSubject) {
+        return applicationRepository.findByIdAndApplicantSubject(id, applicantSubject)
+                .orElseThrow(() -> new ApplicationNotFoundException(id));
+    }
+
+    @Transactional(readOnly = true)
+    @PreAuthorize("hasRole('UNDERWRITER')")
+    public Application getAnyById(UUID id) {
+        return applicationRepository.findById(id)
+                .orElseThrow(() -> new ApplicationNotFoundException(id));
     }
 }
