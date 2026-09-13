@@ -23,6 +23,12 @@ spring:
     web:
       pageable:
         max-page-size: 100
+  http:
+    serviceclient:
+      registry:
+        base-url: ${REGISTRY_BASE_URL:http://localhost:8082}
+        connect-timeout: 2s
+        read-timeout: 3s
 
 server:
   port: 8081
@@ -34,6 +40,11 @@ management:
         include: health
 
 insurance:
+  registration:
+    retry:
+      base-delay: 5s
+      multiplier: 2
+      max-delay: 5m
   premium:
     base-rate: 0.005
     age-factors:

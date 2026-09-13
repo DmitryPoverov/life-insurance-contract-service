@@ -1,0 +1,1 @@
+{"detail":"Registry rejected contract 1b2c3d4e-5f60-4718-8a9b-0c1d2e3f4a5b","instance":"/api/v1/registrations","status":422,"title":"Unprocessable Content","code":"REGISTRATION_REJECTED"}

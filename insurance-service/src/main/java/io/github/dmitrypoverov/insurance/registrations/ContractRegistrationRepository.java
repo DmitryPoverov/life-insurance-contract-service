@@ -1,6 +1,8 @@
 package io.github.dmitrypoverov.insurance.registrations;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 
 import java.util.Collection;
 import java.util.List;
@@ -12,4 +14,7 @@ public interface ContractRegistrationRepository extends JpaRepository<ContractRe
     Optional<ContractRegistration> findByContractId(UUID contractId);
 
     List<ContractRegistration> findByContractIdIn(Collection<UUID> contractIds);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<ContractRegistration> findWithLockById(UUID id);
 }

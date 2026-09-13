@@ -21,6 +21,7 @@ dependencies {
     implementation(libs.spring.boot.starter.data.jpa)
     implementation(libs.spring.boot.starter.liquibase)
     implementation(libs.spring.boot.starter.validation)
+    implementation(libs.spring.boot.starter.restclient)
 
     runtimeOnly(libs.postgresql)
 
@@ -31,6 +32,7 @@ dependencies {
     testImplementation(libs.spring.boot.starter.webmvc.test)
     testImplementation(libs.spring.boot.testcontainers)
     testImplementation(libs.testcontainers.postgresql)
+    testImplementation(libs.wiremock.standalone)
 
     testRuntimeOnly(libs.junit.platform.launcher)
 }

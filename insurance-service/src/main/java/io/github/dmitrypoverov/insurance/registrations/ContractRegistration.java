@@ -18,6 +18,8 @@ import java.util.UUID;
 @EntityListeners(AuditingEntityListener.class)
 public class ContractRegistration {
 
+    private static final int LAST_ERROR_MAX_LENGTH = 2000;
+
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
@@ -62,5 +64,46 @@ public class ContractRegistration {
         registration.nextAttemptAt = now;
         registration.requestId = requestId;
         return registration;
+    }
+
+    public void startAttempt(Instant leaseExpiresAt) {
+        requirePending();
+        attempts++;
+        nextAttemptAt = leaseExpiresAt;
+    }
+
+    public void markRegistered(RegistryRecord registryRecord) {
+        requirePending();
+        status = RegistrationStatus.REGISTERED;
+        registryRecordId = registryRecord.registryRecordId();
+        registeredAt = registryRecord.registeredAt();
+    }
+
+    public void markRejected(String error) {
+        requirePending();
+        status = RegistrationStatus.REJECTED;
+        lastError = shorten(error);
+    }
+
+    public void markFailed(String error) {
+        requirePending();
+        status = RegistrationStatus.FAILED;
+        lastError = shorten(error);
+    }
+
+    public void scheduleRetry(String error, Instant retryAt) {
+        requirePending();
+        lastError = shorten(error);
+        nextAttemptAt = retryAt;
+    }
+
+    private void requirePending() {
+        if (status != RegistrationStatus.PENDING) {
+            throw new IllegalStateException("Registration %s is %s, not PENDING".formatted(id, status));
+        }
+    }
+
+    private static String shorten(String error) {
+        return error.length() > LAST_ERROR_MAX_LENGTH ? error.substring(0, LAST_ERROR_MAX_LENGTH) : error;
     }
 }

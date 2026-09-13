@@ -66,6 +66,8 @@ services:
       DB_URL: jdbc:postgresql://postgres-insurance:5432/${INSURANCE_DB_NAME}
       DB_USERNAME: ${INSURANCE_DB_USER}
       DB_PASSWORD: ${INSURANCE_DB_PASSWORD}
+      REGISTRY_BASE_URL: http://registry-emulator:8080
+      INSURANCE_REGISTRATION_RETRY_MAX_DELAY: 30s
     ports:
       - "${INSURANCE_SERVICE_PORT}:8080"
     depends_on:
