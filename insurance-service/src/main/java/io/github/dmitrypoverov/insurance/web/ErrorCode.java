@@ -9,5 +9,6 @@ public enum ErrorCode {
     CONFLICT,
     INTERNAL_ERROR,
     AGE_NOT_ELIGIBLE,
-    UNSUPPORTED_SORT
+    UNSUPPORTED_SORT,
+    SERVICE_BUSY
 }

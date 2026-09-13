@@ -3,7 +3,9 @@ package io.github.dmitrypoverov.insurance.web;
 import io.github.dmitrypoverov.insurance.applications.ApplicantAgeNotEligibleException;
 import io.github.dmitrypoverov.insurance.applications.ApplicationNotFoundException;
 import io.github.dmitrypoverov.insurance.applications.ApplicationStatusTransitionException;
+import io.github.dmitrypoverov.insurance.contracts.ContractIssuanceBusyException;
 import org.jspecify.annotations.Nullable;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.*;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
@@ -23,6 +25,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     private static final String CODE_PROPERTY = "code";
     private static final String ERRORS_PROPERTY = "errors";
     private static final String INVALID_VALUE = "invalid value";
+    private static final String RETRY_AFTER_SECONDS = "1";
 
     @ExceptionHandler(AccessDeniedException.class)
     @Nullable ResponseEntity<Object> handleAccessDenied(AccessDeniedException exception,
@@ -88,6 +91,30 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 HttpStatus.BAD_REQUEST,
                 ErrorCode.UNSUPPORTED_SORT,
                 exception.getMessage(),
+                request);
+    }
+
+    @ExceptionHandler(ContractIssuanceBusyException.class)
+    @Nullable ResponseEntity<Object> handleIssuanceBusy(ContractIssuanceBusyException exception,
+                                                        WebRequest request) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HttpHeaders.RETRY_AFTER, RETRY_AFTER_SECONDS);
+
+        ProblemDetail body = ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, exception.getMessage());
+        body.setProperty(CODE_PROPERTY, ErrorCode.SERVICE_BUSY.name());
+
+        return handleExceptionInternal(exception, body, headers, HttpStatus.SERVICE_UNAVAILABLE, request);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    @Nullable ResponseEntity<Object> handleDataIntegrityViolation(DataIntegrityViolationException exception,
+                                                                  WebRequest request) {
+        logger.warn("Data integrity violation", exception);
+        return problem(
+                exception,
+                HttpStatus.CONFLICT,
+                ErrorCode.CONFLICT,
+                "Request conflicts with existing data",
                 request);
     }
 
