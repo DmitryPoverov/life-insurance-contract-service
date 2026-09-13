@@ -1,6 +1,7 @@
 package io.github.dmitrypoverov.insurance.contracts;
 
 import io.github.dmitrypoverov.insurance.registrations.ContractRegistration;
+import io.github.dmitrypoverov.insurance.registrations.RegistrationStatus;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -26,10 +27,11 @@ public class ContractMapper {
     }
 
     private ContractRegistrationResponse toRegistrationResponse(ContractRegistration registration) {
+        boolean pending = registration.getStatus() == RegistrationStatus.PENDING;
         return new ContractRegistrationResponse(
                 registration.getStatus(),
                 registration.getAttempts(),
-                registration.getNextAttemptAt(),
+                pending ? registration.getNextAttemptAt() : null,
                 registration.getRegistryRecordId(),
                 registration.getRegisteredAt());
     }

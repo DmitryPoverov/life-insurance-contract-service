@@ -9,6 +9,7 @@ import io.github.dmitrypoverov.insurance.applications.ApplicationStatus;
 import io.github.dmitrypoverov.insurance.registrations.ContractRegistration;
 import io.github.dmitrypoverov.insurance.registrations.ContractRegistrationRepository;
 import io.github.dmitrypoverov.insurance.registrations.RegistrationStatus;
+import io.github.dmitrypoverov.insurance.registrations.RegistryRecord;
 import io.github.dmitrypoverov.insurance.support.IntegrationTest;
 import io.github.dmitrypoverov.insurance.support.TestJwtTokens;
 import java.math.BigDecimal;
@@ -174,6 +175,24 @@ class ContractControllerTest extends IntegrationTest {
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.id").isEqualTo(contract.getId().toString());
+    }
+
+    @Test
+    void getById_registeredContract_hasNoNextAttemptAt() {
+        Contract contract = saveIssuedContract(CUSTOMER_SUBJECT);
+        ContractRegistration registration =
+                contractRegistrationRepository.findByContractId(contract.getId()).orElseThrow();
+        registration.markRegistered(new RegistryRecord("GSR-TEST-000001", Instant.now()));
+        contractRegistrationRepository.save(registration);
+
+        client.get()
+                .uri("/api/v1/contracts/{id}", contract.getId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.registration.status").isEqualTo("REGISTERED")
+                .jsonPath("$.registration.nextAttemptAt").doesNotExist();
     }
 
     @Test

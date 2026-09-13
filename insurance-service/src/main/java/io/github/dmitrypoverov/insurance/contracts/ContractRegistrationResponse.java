@@ -8,7 +8,7 @@ import java.time.Instant;
 public record ContractRegistrationResponse(
         RegistrationStatus status,
         int attempts,
-        Instant nextAttemptAt,
+        @Nullable Instant nextAttemptAt,
         @Nullable String registryRecordId,
         @Nullable Instant registeredAt) {
 }
