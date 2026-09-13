@@ -25,7 +25,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ContractController {
 
-    private static final Set<String> SORTABLE_PROPERTIES = Set.of("issuedAt", "contractNumber");
+    private static final Set<String> SORTABLE_PROPERTIES = Set.of("issuedAt", "coverageAmount");
 
     private final ContractIssuanceService contractIssuanceService;
     private final ContractService contractService;
