@@ -2,6 +2,7 @@ package io.github.dmitrypoverov.insurance.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -11,38 +12,39 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
-  @Bean
-  SecurityFilterChain securityFilterChain(HttpSecurity http) {
-    // CSRF не нужен, т.к. используем bearer-токен в заголовке Authorization, его ставит только код
-    // клиента, браузер сам такой заголовок не добавляет.
-    // В цепочке фильтров используется SessionCreationPolicy.STATELESS, поэтому сессий и cookie нет.
-    return http.csrf(AbstractHttpConfigurer::disable)
-        .sessionManagement(
-            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(
-            requests ->
-                requests
-                    .requestMatchers(
-                        "/actuator/health",
-                        "/actuator/health/**",
-                        "/swagger-ui.html",
-                        "/swagger-ui/**",
-                        "/v3/api-docs",
-                        "/v3/api-docs/**")
-                    .permitAll()
-                    .anyRequest()
-                    .authenticated())
-        .oauth2ResourceServer(
-            oauth2 -> oauth2.jwt(
-                jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
-        .build();
-  }
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http) {
+        // CSRF не нужен, т.к. используем bearer-токен в заголовке Authorization, его ставит только код
+        // клиента, браузер сам такой заголовок не добавляет.
+        // В цепочке фильтров используется SessionCreationPolicy.STATELESS, поэтому сессий и cookie нет.
+        return http.csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(
+                        session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(
+                        requests ->
+                                requests
+                                        .requestMatchers(
+                                                "/actuator/health",
+                                                "/actuator/health/**",
+                                                "/swagger-ui.html",
+                                                "/swagger-ui/**",
+                                                "/v3/api-docs",
+                                                "/v3/api-docs/**")
+                                        .permitAll()
+                                        .anyRequest()
+                                        .authenticated())
+                .oauth2ResourceServer(
+                        oauth2 -> oauth2.jwt(
+                                jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
+                .build();
+    }
 
-  private JwtAuthenticationConverter jwtAuthenticationConverter() {
-    JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-    converter.setJwtGrantedAuthoritiesConverter(new KeycloakRealmRoleConverter());
-    return converter;
-  }
+    private JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(new KeycloakRealmRoleConverter());
+        return converter;
+    }
 }
