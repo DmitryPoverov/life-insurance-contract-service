@@ -16,13 +16,13 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Objects;
 
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
     private static final String CODE_PROPERTY = "code";
     private static final String ERRORS_PROPERTY = "errors";
+    private static final String INVALID_VALUE = "invalid value";
 
     @ExceptionHandler(AccessDeniedException.class)
     @Nullable ResponseEntity<Object> handleAccessDenied(AccessDeniedException exception,
@@ -158,8 +158,16 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     private Map<String, String> fieldErrors(MethodArgumentNotValidException exception) {
         Map<String, String> errors = new LinkedHashMap<>();
         for (FieldError error : exception.getBindingResult().getFieldErrors()) {
-            errors.put(error.getField(), Objects.requireNonNullElse(error.getDefaultMessage(), "invalid value"));
+            errors.put(error.getField(), messageFor(error));
         }
         return errors;
+    }
+
+    private String messageFor(FieldError error) {
+        if (error.isBindingFailure()) {
+            return INVALID_VALUE;
+        }
+        String message = error.getDefaultMessage();
+        return message != null ? message : INVALID_VALUE;
     }
 }

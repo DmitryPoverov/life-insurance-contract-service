@@ -247,6 +247,18 @@ class ApplicationControllerTest extends IntegrationTest {
     }
 
     @Test
+    void list_withUnconvertibleParameter_returnsValidationFailedWithoutInternalDetails() {
+        client.get()
+                .uri("/api/v1/applications?status=FOO")
+                .header(HttpHeaders.AUTHORIZATION, bearer(CUSTOMER_SUBJECT, "customer"))
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("VALIDATION_FAILED")
+                .jsonPath("$.errors.status").isEqualTo("invalid value");
+    }
+
+    @Test
     void list_pageSizeAboveMaximum_clampsToMaximum() {
         client.get()
                 .uri("/api/v1/applications?size=1000")
