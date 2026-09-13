@@ -15,6 +15,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
@@ -23,7 +24,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     private static final String ERRORS_PROPERTY = "errors";
 
     @ExceptionHandler(AccessDeniedException.class)
-    ResponseEntity<Object> handleAccessDenied(
+    @Nullable ResponseEntity<Object> handleAccessDenied(
             AccessDeniedException exception,
             WebRequest request) {
         return problem(exception, HttpStatus.FORBIDDEN, ErrorCode.ACCESS_DENIED, "Access is denied",
@@ -31,7 +32,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(ApplicationStatusTransitionException.class)
-    ResponseEntity<Object> handleStatusTransition(
+    @Nullable ResponseEntity<Object> handleStatusTransition(
             ApplicationStatusTransitionException exception, WebRequest request) {
         return problem(exception, HttpStatus.CONFLICT, ErrorCode.CONFLICT, exception.getMessage(),
                 request);
@@ -39,7 +40,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
 
 
     @ExceptionHandler(Exception.class)
-    ResponseEntity<Object> handleUnexpected(Exception exception, WebRequest request) {
+    @Nullable ResponseEntity<Object> handleUnexpected(Exception exception, WebRequest request) {
         logger.error("Unexpected error while handling request", exception);
         return problem(
                 exception,
@@ -50,7 +51,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(ApplicantAgeNotEligibleException.class)
-    ResponseEntity<Object> handleAgeNotEligible(
+    @Nullable ResponseEntity<Object> handleAgeNotEligible(
             ApplicantAgeNotEligibleException exception, WebRequest request) {
         return problem(
                 exception,
@@ -61,7 +62,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @Override
-    protected ResponseEntity<Object> handleMethodArgumentNotValid(
+    protected @Nullable ResponseEntity<Object> handleMethodArgumentNotValid(
             MethodArgumentNotValidException exception,
             HttpHeaders headers,
             HttpStatusCode status,
@@ -73,7 +74,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @Override
-    protected ResponseEntity<Object> handleNoResourceFoundException(
+    protected @Nullable ResponseEntity<Object> handleNoResourceFoundException(
             NoResourceFoundException exception,
             HttpHeaders headers,
             HttpStatusCode status,
@@ -83,7 +84,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @Override
-    protected ResponseEntity<Object> handleExceptionInternal(
+    protected @Nullable ResponseEntity<Object> handleExceptionInternal(
             Exception exception,
             @Nullable Object body,
             HttpHeaders headers,
@@ -97,7 +98,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return response;
     }
 
-    private ResponseEntity<Object> problem(
+    private @Nullable ResponseEntity<Object> problem(
             Exception exception, HttpStatus status, ErrorCode code, String detail, WebRequest request) {
         ProblemDetail body = ProblemDetail.forStatusAndDetail(status, detail);
         body.setProperty(CODE_PROPERTY, code.name());
@@ -126,7 +127,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     private Map<String, String> fieldErrors(MethodArgumentNotValidException exception) {
         Map<String, String> errors = new LinkedHashMap<>();
         for (FieldError error : exception.getBindingResult().getFieldErrors()) {
-            errors.put(error.getField(), error.getDefaultMessage());
+            errors.put(error.getField(), Objects.requireNonNullElse(error.getDefaultMessage(), "invalid value"));
         }
         return errors;
     }

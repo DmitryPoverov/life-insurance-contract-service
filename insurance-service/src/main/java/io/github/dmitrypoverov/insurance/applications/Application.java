@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -13,6 +16,7 @@ import java.util.UUID;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@EntityListeners(AuditingEntityListener.class)
 public class Application {
 
     @Id
@@ -44,9 +48,11 @@ public class Application {
     @Column(nullable = false, length = 32)
     private ApplicationStatus status;
 
-    @Column(nullable = false)
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
+    @LastModifiedDate
     @Column(nullable = false)
     private Instant updatedAt;
 
@@ -102,18 +108,6 @@ public class Application {
             throw new ApplicationStatusTransitionException(id, status, target);
         }
         status = target;
-    }
-
-    @PrePersist
-    void onCreate() {
-        Instant now = Instant.now();
-        createdAt = now;
-        updatedAt = now;
-    }
-
-    @PreUpdate
-    void onUpdate() {
-        updatedAt = Instant.now();
     }
 }
 

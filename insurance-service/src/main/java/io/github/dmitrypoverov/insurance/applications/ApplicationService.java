@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDate;
 
 @Service
@@ -13,6 +14,7 @@ public class ApplicationService {
 
     private final ApplicationRepository applicationRepository;
     private final PremiumCalculator premiumCalculator;
+    private final Clock clock;
 
     @Transactional
     public Application create(String applicantSubject, ApplicationCreateRequest request) {
@@ -21,7 +23,7 @@ public class ApplicationService {
                         request.coverageAmount(),
                         request.termYears(),
                         request.insuredBirthDate(),
-                        LocalDate.now());
+                        LocalDate.now(clock));
 
         Application application =
                 Application.submit(
