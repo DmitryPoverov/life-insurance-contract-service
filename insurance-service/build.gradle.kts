@@ -18,6 +18,12 @@ dependencies {
     implementation(libs.spring.boot.starter.oauth2.resource.server)
     implementation(libs.spring.boot.starter.actuator)
     implementation(libs.springdoc.openapi.starter.webmvc.ui)
+    implementation(libs.spring.boot.starter.data.jpa)
+    implementation(libs.spring.boot.starter.liquibase)
+    runtimeOnly(libs.postgresql)
+
+    compileOnly(libs.lombok)
+    annotationProcessor(libs.lombok)
 
     testImplementation(libs.spring.boot.starter.webmvc.test)
     testRuntimeOnly(libs.junit.platform.launcher)

@@ -7,6 +7,18 @@ spring:
         jwt:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/insurance}
           jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8080/realms/insurance/protocol/openid-connect/certs}
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:15432/insurance}
+    username: ${DB_USERNAME:insurance}
+    password: ${DB_PASSWORD:insurance}
+    hikari:
+      connection-init-sql: SET lock_timeout = '3s'
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
 
 server:
   port: 8081

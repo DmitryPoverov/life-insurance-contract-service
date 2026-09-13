@@ -1,0 +1,4 @@
+databaseChangeLog:
+  - include:
+      file: changes/0001-create-application.sql
+      relativeToChangelogFile: true
