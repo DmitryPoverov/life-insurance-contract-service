@@ -52,6 +52,12 @@ public class ContractController {
         return contractMapper.toResponse(details);
     }
 
+    @PostMapping("/api/v1/contracts/{id}/registration/retry")
+    @PreAuthorize("hasRole('UNDERWRITER')")
+    ContractResponse retryRegistration(@PathVariable UUID id) {
+        return contractMapper.toResponse(contractService.retryRegistration(id));
+    }
+
     @GetMapping("/api/v1/contracts")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'UNDERWRITER')")
     PagedModel<ContractResponse> list(

@@ -10,6 +10,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -26,6 +28,7 @@ public class ContractService {
 
     private final ContractRepository contractRepository;
     private final ContractRegistrationRepository contractRegistrationRepository;
+    private final Clock clock;
 
     @Transactional(readOnly = true)
     public ContractDetails getOwnById(UUID id, String policyholderSubject) {
@@ -59,6 +62,16 @@ public class ContractService {
     @Transactional(readOnly = true)
     public ContractDetails detailsOf(Contract contract) {
         return withRegistration(contract);
+    }
+
+    @Transactional
+    public ContractDetails retryRegistration(UUID contractId) {
+        Contract contract = contractRepository.findById(contractId)
+                .orElseThrow(() -> new ContractNotFoundException(contractId));
+        ContractRegistration registration = contractRegistrationRepository.findWithLockByContractId(contractId)
+                .orElseThrow(() -> missingRegistration(contractId));
+        registration.retry(Instant.now(clock));
+        return new ContractDetails(contract, registration);
     }
 
     private ContractDetails withRegistration(Contract contract) {

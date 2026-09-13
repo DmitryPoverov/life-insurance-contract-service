@@ -42,6 +42,7 @@ public abstract class IntegrationTest {
     static void registryProperties(DynamicPropertyRegistry properties) {
         properties.add("spring.http.serviceclient.registry.base-url", registry::baseUrl);
         properties.add("spring.http.serviceclient.registry.read-timeout", () -> "500ms");
+        properties.add("insurance.registration.scheduler.poll-interval", () -> "1h");
     }
 
     @BeforeEach

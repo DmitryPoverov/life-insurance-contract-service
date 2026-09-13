@@ -45,6 +45,10 @@ insurance:
       base-delay: 5s
       multiplier: 2
       max-delay: 5m
+    scheduler:
+      lease-duration: 30s
+      poll-interval: 2s
+      max-tasks-per-tick: 10
   premium:
     base-rate: 0.005
     age-factors:

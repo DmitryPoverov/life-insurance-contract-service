@@ -177,6 +177,62 @@ class ContractControllerTest extends IntegrationTest {
     }
 
     @Test
+    void retryRegistration_failedRegistration_returnsPendingAndKeepsAttempts() {
+        Contract contract = saveFailedContract();
+
+        client.post()
+                .uri("/api/v1/contracts/{id}/registration/retry", contract.getId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.registration.status").isEqualTo("PENDING")
+                .jsonPath("$.registration.attempts").isEqualTo(1);
+
+        ContractRegistration registration = contractRegistrationRepository.findByContractId(contract.getId()).orElseThrow();
+        assertThat(registration.getStatus()).isEqualTo(RegistrationStatus.PENDING);
+        assertThat(registration.getAttempts()).isEqualTo(1);
+    }
+
+    @Test
+    void retryRegistration_pendingRegistration_returnsConflict() {
+        Contract contract = saveIssuedContract(CUSTOMER_SUBJECT);
+
+        client.post()
+                .uri("/api/v1/contracts/{id}/registration/retry", contract.getId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .exchange()
+                .expectStatus().isEqualTo(409)
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("CONFLICT");
+
+        ContractRegistration registration = contractRegistrationRepository.findByContractId(contract.getId()).orElseThrow();
+        assertThat(registration.getStatus()).isEqualTo(RegistrationStatus.PENDING);
+    }
+
+    @Test
+    void retryRegistration_customerToken_returnsForbidden() {
+        Contract contract = saveFailedContract();
+
+        client.post()
+                .uri("/api/v1/contracts/{id}/registration/retry", contract.getId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(CUSTOMER_SUBJECT, "customer"))
+                .exchange()
+                .expectStatus().isForbidden();
+    }
+
+    @Test
+    void retryRegistration_nonExistentContract_returnsNotFound() {
+        client.post()
+                .uri("/api/v1/contracts/{id}/registration/retry", UUID.randomUUID())
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .exchange()
+                .expectStatus().isNotFound()
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("NOT_FOUND");
+    }
+
+    @Test
     void list_customer_returnsOnlyOwnContracts() {
         saveIssuedContract(CUSTOMER_SUBJECT);
         saveIssuedContract(OTHER_CUSTOMER_SUBJECT);
@@ -264,6 +320,16 @@ class ContractControllerTest extends IntegrationTest {
         Contract contract = contractRepository.save(
                 Contract.issue(application, UNDERWRITER_SUBJECT, now, LocalDate.now(ZoneOffset.UTC)));
         contractRegistrationRepository.save(ContractRegistration.pending(contract.getId(), now, null));
+        return contract;
+    }
+
+    private Contract saveFailedContract() {
+        Contract contract = saveIssuedContract(CUSTOMER_SUBJECT);
+        ContractRegistration registration =
+                contractRegistrationRepository.findByContractId(contract.getId()).orElseThrow();
+        registration.startAttempt(Instant.now().plusSeconds(30));
+        registration.markFailed("boom");
+        contractRegistrationRepository.save(registration);
         return contract;
     }
 

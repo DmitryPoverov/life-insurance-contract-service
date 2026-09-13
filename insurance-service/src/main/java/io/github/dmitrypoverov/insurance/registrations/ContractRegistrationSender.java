@@ -14,10 +14,9 @@ public class ContractRegistrationSender {
     private final RegistrationOutcomeRecorder outcomeRecorder;
 
     public void send(ContractRegistration claimed) {
-        Contract contract = contractRepository.findById(claimed.getContractId()).orElseThrow();
-
         RegistryRecord registryRecord;
         try {
+            Contract contract = contractRepository.findById(claimed.getContractId()).orElseThrow();
             registryRecord = registryClient.register(contract);
         } catch (RegistryRejectedException rejection) {
             outcomeRecorder.recordRejected(claimed, describe(rejection));
@@ -25,7 +24,7 @@ public class ContractRegistrationSender {
         } catch (PermanentRegistryException failure) {
             outcomeRecorder.recordFailed(claimed, describe(failure));
             return;
-        } catch (RuntimeException retryableOrUnexpected) {
+        } catch (Exception retryableOrUnexpected) {
             outcomeRecorder.recordRetry(claimed, describe(retryableOrUnexpected));
             return;
         }
@@ -33,7 +32,7 @@ public class ContractRegistrationSender {
         outcomeRecorder.recordRegistered(claimed, registryRecord);
     }
 
-    private static String describe(RuntimeException error) {
+    private static String describe(Exception error) {
         String message = error.getMessage();
         return message != null ? message : error.getClass().getName();
     }

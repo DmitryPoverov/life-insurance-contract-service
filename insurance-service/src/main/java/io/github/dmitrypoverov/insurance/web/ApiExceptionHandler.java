@@ -5,6 +5,7 @@ import io.github.dmitrypoverov.insurance.applications.ApplicationNotFoundExcepti
 import io.github.dmitrypoverov.insurance.applications.ApplicationStatusTransitionException;
 import io.github.dmitrypoverov.insurance.contracts.ContractIssuanceBusyException;
 import io.github.dmitrypoverov.insurance.contracts.ContractNotFoundException;
+import io.github.dmitrypoverov.insurance.registrations.RegistrationNotFailedException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.*;
@@ -64,6 +65,17 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ApplicationStatusTransitionException.class)
     @Nullable ResponseEntity<Object> handleStatusTransition(ApplicationStatusTransitionException exception,
                                                             WebRequest request) {
+        return problem(
+                exception,
+                HttpStatus.CONFLICT,
+                ErrorCode.CONFLICT,
+                exception.getMessage(),
+                request);
+    }
+
+    @ExceptionHandler(RegistrationNotFailedException.class)
+    @Nullable ResponseEntity<Object> handleRegistrationNotFailed(RegistrationNotFailedException exception,
+                                                                 WebRequest request) {
         return problem(
                 exception,
                 HttpStatus.CONFLICT,

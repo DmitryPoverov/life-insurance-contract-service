@@ -97,6 +97,14 @@ public class ContractRegistration {
         nextAttemptAt = retryAt;
     }
 
+    public void retry(Instant now) {
+        if (status != RegistrationStatus.FAILED) {
+            throw new RegistrationNotFailedException(contractId, status);
+        }
+        status = RegistrationStatus.PENDING;
+        nextAttemptAt = now;
+    }
+
     private void requirePending() {
         if (status != RegistrationStatus.PENDING) {
             throw new IllegalStateException("Registration %s is %s, not PENDING".formatted(id, status));
