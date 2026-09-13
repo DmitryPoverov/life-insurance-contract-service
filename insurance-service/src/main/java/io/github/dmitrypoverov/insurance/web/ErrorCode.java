@@ -8,5 +8,6 @@ public enum ErrorCode {
     NOT_FOUND,
     CONFLICT,
     INTERNAL_ERROR,
-    AGE_NOT_ELIGIBLE
+    AGE_NOT_ELIGIBLE,
+    UNSUPPORTED_SORT
 }

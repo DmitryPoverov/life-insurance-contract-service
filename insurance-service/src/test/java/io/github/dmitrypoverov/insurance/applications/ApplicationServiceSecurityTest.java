@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -30,6 +31,17 @@ class ApplicationServiceSecurityTest extends IntegrationTest {
 
         UUID uuid = UUID.randomUUID();
         assertThatThrownBy(() -> applicationService.getAnyById(uuid))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void findAny_customerAuthentication_throwsAccessDenied() {
+        SecurityContextHolder.getContext().setAuthentication(
+                new TestingAuthenticationToken(CUSTOMER_SUBJECT, "n/a", "ROLE_CUSTOMER"));
+        ApplicationFilter emptyFilter = new ApplicationFilter(null, null, null, null, null, null);
+        Pageable firstPage = Pageable.ofSize(20);
+
+        assertThatThrownBy(() -> applicationService.findAny(emptyFilter, firstPage))
                 .isInstanceOf(AccessDeniedException.class);
     }
 }

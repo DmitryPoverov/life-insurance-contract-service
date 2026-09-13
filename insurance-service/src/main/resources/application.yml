@@ -19,6 +19,10 @@ spring:
       ddl-auto: validate
   liquibase:
     change-log: classpath:db/changelog/db.changelog-master.yaml
+  data:
+    web:
+      pageable:
+        max-page-size: 100
 
 server:
   port: 8081

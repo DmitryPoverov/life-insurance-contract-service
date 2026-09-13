@@ -25,30 +25,41 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     private static final String ERRORS_PROPERTY = "errors";
 
     @ExceptionHandler(AccessDeniedException.class)
-    @Nullable ResponseEntity<Object> handleAccessDenied(
-            AccessDeniedException exception,
-            WebRequest request) {
-        return problem(exception, HttpStatus.FORBIDDEN, ErrorCode.ACCESS_DENIED, "Access is denied",
+    @Nullable ResponseEntity<Object> handleAccessDenied(AccessDeniedException exception,
+                                                        WebRequest request) {
+        return problem(
+                exception,
+                HttpStatus.FORBIDDEN,
+                ErrorCode.ACCESS_DENIED,
+                "Access is denied",
                 request);
     }
 
     @ExceptionHandler(ApplicationNotFoundException.class)
-    @Nullable ResponseEntity<Object> handleApplicationNotFound(
-            ApplicationNotFoundException exception, WebRequest request) {
-        return problem(exception, HttpStatus.NOT_FOUND, ErrorCode.NOT_FOUND, exception.getMessage(),
+    @Nullable ResponseEntity<Object> handleApplicationNotFound(ApplicationNotFoundException exception,
+                                                               WebRequest request) {
+        return problem(
+                exception,
+                HttpStatus.NOT_FOUND,
+                ErrorCode.NOT_FOUND,
+                exception.getMessage(),
                 request);
     }
 
     @ExceptionHandler(ApplicationStatusTransitionException.class)
-    @Nullable ResponseEntity<Object> handleStatusTransition(
-            ApplicationStatusTransitionException exception, WebRequest request) {
-        return problem(exception, HttpStatus.CONFLICT, ErrorCode.CONFLICT, exception.getMessage(),
+    @Nullable ResponseEntity<Object> handleStatusTransition(ApplicationStatusTransitionException exception,
+                                                            WebRequest request) {
+        return problem(
+                exception,
+                HttpStatus.CONFLICT,
+                ErrorCode.CONFLICT,
+                exception.getMessage(),
                 request);
     }
 
-
     @ExceptionHandler(Exception.class)
-    @Nullable ResponseEntity<Object> handleUnexpected(Exception exception, WebRequest request) {
+    @Nullable ResponseEntity<Object> handleUnexpected(Exception exception,
+                                                      WebRequest request) {
         logger.error("Unexpected error while handling request", exception);
         return problem(
                 exception,
@@ -59,8 +70,8 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(ApplicantAgeNotEligibleException.class)
-    @Nullable ResponseEntity<Object> handleAgeNotEligible(
-            ApplicantAgeNotEligibleException exception, WebRequest request) {
+    @Nullable ResponseEntity<Object> handleAgeNotEligible(ApplicantAgeNotEligibleException exception,
+                                                          WebRequest request) {
         return problem(
                 exception,
                 HttpStatus.BAD_REQUEST,
@@ -69,12 +80,22 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
                 request);
     }
 
+    @ExceptionHandler(UnsupportedSortPropertyException.class)
+    @Nullable ResponseEntity<Object> handleUnsupportedSort(UnsupportedSortPropertyException exception,
+                                                           WebRequest request) {
+        return problem(
+                exception,
+                HttpStatus.BAD_REQUEST,
+                ErrorCode.UNSUPPORTED_SORT,
+                exception.getMessage(),
+                request);
+    }
+
     @Override
-    protected @Nullable ResponseEntity<Object> handleMethodArgumentNotValid(
-            MethodArgumentNotValidException exception,
-            HttpHeaders headers,
-            HttpStatusCode status,
-            WebRequest request) {
+    protected @Nullable ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException exception,
+                                                                            HttpHeaders headers,
+                                                                            HttpStatusCode status,
+                                                                            WebRequest request) {
         ProblemDetail body = ProblemDetail.forStatusAndDetail(status, "Request validation failed");
         body.setProperty(CODE_PROPERTY, ErrorCode.VALIDATION_FAILED.name());
         body.setProperty(ERRORS_PROPERTY, fieldErrors(exception));
@@ -82,22 +103,20 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @Override
-    protected @Nullable ResponseEntity<Object> handleNoResourceFoundException(
-            NoResourceFoundException exception,
-            HttpHeaders headers,
-            HttpStatusCode status,
-            WebRequest request) {
+    protected @Nullable ResponseEntity<Object> handleNoResourceFoundException(NoResourceFoundException exception,
+                                                                              HttpHeaders headers,
+                                                                              HttpStatusCode status,
+                                                                              WebRequest request) {
         ProblemDetail body = ProblemDetail.forStatusAndDetail(status, "Endpoint not found");
         return handleExceptionInternal(exception, body, headers, status, request);
     }
 
     @Override
-    protected @Nullable ResponseEntity<Object> handleExceptionInternal(
-            Exception exception,
-            @Nullable Object body,
-            HttpHeaders headers,
-            HttpStatusCode statusCode,
-            WebRequest request) {
+    protected @Nullable ResponseEntity<Object> handleExceptionInternal(Exception exception,
+                                                                       @Nullable Object body,
+                                                                       HttpHeaders headers,
+                                                                       HttpStatusCode statusCode,
+                                                                       WebRequest request) {
         ResponseEntity<Object> response =
                 super.handleExceptionInternal(exception, body, headers, statusCode, request);
         if (response != null && response.getBody() instanceof ProblemDetail problem) {
@@ -106,14 +125,18 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return response;
     }
 
-    private @Nullable ResponseEntity<Object> problem(
-            Exception exception, HttpStatus status, ErrorCode code, String detail, WebRequest request) {
+    private @Nullable ResponseEntity<Object> problem(Exception exception,
+                                                     HttpStatus status,
+                                                     ErrorCode code,
+                                                     String detail,
+                                                     WebRequest request) {
         ProblemDetail body = ProblemDetail.forStatusAndDetail(status, detail);
         body.setProperty(CODE_PROPERTY, code.name());
         return handleExceptionInternal(exception, body, new HttpHeaders(), status, request);
     }
 
-    private void addCodeIfMissing(ProblemDetail problem, HttpStatusCode statusCode) {
+    private void addCodeIfMissing(ProblemDetail problem,
+                                  HttpStatusCode statusCode) {
         Map<String, Object> properties = problem.getProperties();
         if (properties != null && properties.containsKey(CODE_PROPERTY)) {
             return;

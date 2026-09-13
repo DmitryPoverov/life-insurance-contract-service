@@ -6,6 +6,7 @@ import io.github.dmitrypoverov.insurance.support.IntegrationTest;
 import io.github.dmitrypoverov.insurance.support.TestJwtTokens;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -163,15 +164,112 @@ class ApplicationControllerTest extends IntegrationTest {
                 .jsonPath("$.code").isEqualTo("MALFORMED_REQUEST");
     }
 
+    @Test
+    void list_customer_returnsOnlyOwnApplications() {
+        saveApplicationOf(CUSTOMER_SUBJECT);
+        saveApplicationOf(OTHER_CUSTOMER_SUBJECT);
+
+        client.get()
+                .uri("/api/v1/applications")
+                .header(HttpHeaders.AUTHORIZATION, bearer(CUSTOMER_SUBJECT, "customer"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.page.totalElements").isEqualTo(1)
+                .jsonPath("$.content[0].applicantSubject").isEqualTo(CUSTOMER_SUBJECT);
+    }
+
+    @Test
+    void list_underwriter_returnsAllApplications() {
+        saveApplicationOf(CUSTOMER_SUBJECT);
+        saveApplicationOf(OTHER_CUSTOMER_SUBJECT);
+
+        client.get()
+                .uri("/api/v1/applications")
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.page.totalElements").isEqualTo(2);
+    }
+
+    @Test
+    void list_withStatusAndCoverageFilters_returnsMatchingOnly() {
+        applicationRepository.save(newApplication(CUSTOMER_SUBJECT, new BigDecimal("1000000.00")));
+        Application approvedSmall = newApplication(CUSTOMER_SUBJECT, new BigDecimal("50000.00"));
+        approvedSmall.approve(UNDERWRITER_SUBJECT);
+        applicationRepository.save(approvedSmall);
+        Application approvedLarge = newApplication(CUSTOMER_SUBJECT, new BigDecimal("1000000.00"));
+        approvedLarge.approve(UNDERWRITER_SUBJECT);
+        Application expected = applicationRepository.save(approvedLarge);
+
+        client.get()
+                .uri("/api/v1/applications?status=APPROVED&coverageFrom=100000")
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.page.totalElements").isEqualTo(1)
+                .jsonPath("$.content[0].id").isEqualTo(expected.getId().toString());
+    }
+
+    @Test
+    void list_withCreatedDateRange_filtersByCreationDay() {
+        saveApplicationOf(CUSTOMER_SUBJECT);
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+
+        client.get()
+                .uri("/api/v1/applications?createdFrom={from}", today)
+                .header(HttpHeaders.AUTHORIZATION, bearer(CUSTOMER_SUBJECT, "customer"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.page.totalElements").isEqualTo(1);
+
+        client.get()
+                .uri("/api/v1/applications?createdTo={to}", today.minusDays(1))
+                .header(HttpHeaders.AUTHORIZATION, bearer(CUSTOMER_SUBJECT, "customer"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.page.totalElements").isEqualTo(0);
+    }
+
+    @Test
+    void list_unsupportedSortProperty_returnsBadRequest() {
+        client.get()
+                .uri("/api/v1/applications?sort=insuredFullName")
+                .header(HttpHeaders.AUTHORIZATION, bearer(CUSTOMER_SUBJECT, "customer"))
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("UNSUPPORTED_SORT");
+    }
+
+    @Test
+    void list_pageSizeAboveMaximum_clampsToMaximum() {
+        client.get()
+                .uri("/api/v1/applications?size=1000")
+                .header(HttpHeaders.AUTHORIZATION, bearer(CUSTOMER_SUBJECT, "customer"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.page.size").isEqualTo(100);
+    }
+
     private Application saveApplicationOf(String applicantSubject) {
-        return applicationRepository.save(Application.submit(
+        return applicationRepository.save(newApplication(applicantSubject, new BigDecimal("1000000.00")));
+    }
+
+    private Application newApplication(String applicantSubject, BigDecimal coverageAmount) {
+        return Application.submit(
                 applicantSubject,
                 "Ivan Petrov",
                 LocalDate.now().minusYears(36).minusDays(1),
                 "AB1234567",
-                new BigDecimal("1000000.00"),
+                coverageAmount,
                 10,
-                new BigDecimal("65000.00")));
+                new BigDecimal("65000.00"));
     }
 
     private String bearer(String subject, String... roles) {
