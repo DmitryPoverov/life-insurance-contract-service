@@ -4,6 +4,7 @@ import io.github.dmitrypoverov.insurance.applications.ApplicantAgeNotEligibleExc
 import io.github.dmitrypoverov.insurance.applications.ApplicationNotFoundException;
 import io.github.dmitrypoverov.insurance.applications.ApplicationStatusTransitionException;
 import io.github.dmitrypoverov.insurance.contracts.ContractIssuanceBusyException;
+import io.github.dmitrypoverov.insurance.contracts.ContractNotFoundException;
 import org.jspecify.annotations.Nullable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.*;
@@ -41,6 +42,17 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ApplicationNotFoundException.class)
     @Nullable ResponseEntity<Object> handleApplicationNotFound(ApplicationNotFoundException exception,
                                                                WebRequest request) {
+        return problem(
+                exception,
+                HttpStatus.NOT_FOUND,
+                ErrorCode.NOT_FOUND,
+                exception.getMessage(),
+                request);
+    }
+
+    @ExceptionHandler(ContractNotFoundException.class)
+    @Nullable ResponseEntity<Object> handleContractNotFound(ContractNotFoundException exception,
+                                                            WebRequest request) {
         return problem(
                 exception,
                 HttpStatus.NOT_FOUND,

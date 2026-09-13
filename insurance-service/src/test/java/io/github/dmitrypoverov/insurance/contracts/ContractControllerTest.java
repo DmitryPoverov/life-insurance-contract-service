@@ -13,6 +13,7 @@ import io.github.dmitrypoverov.insurance.support.TestJwtTokens;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -26,6 +27,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 class ContractControllerTest extends IntegrationTest {
 
     private static final String CUSTOMER_SUBJECT = "11111111-1111-1111-1111-111111111111";
+    private static final String OTHER_CUSTOMER_SUBJECT = "22222222-2222-2222-2222-222222222222";
     private static final String UNDERWRITER_SUBJECT = "33333333-3333-3333-3333-333333333333";
     private static final String CONTRACT_NUMBER_FORMAT = "LI-\\d{4}-\\d{6}";
 
@@ -51,6 +53,7 @@ class ContractControllerTest extends IntegrationTest {
                 .expectBody()
                 .jsonPath("$.applicationId").isEqualTo(applicationId.toString())
                 .jsonPath("$.policyholderSubject").isEqualTo(CUSTOMER_SUBJECT)
+                .jsonPath("$.registration.status").isEqualTo("PENDING")
                 .jsonPath("$.contractNumber")
                 .value(number -> assertThat(number.toString()).matches(CONTRACT_NUMBER_FORMAT));
 
@@ -82,7 +85,7 @@ class ContractControllerTest extends IntegrationTest {
 
     @Test
     void issue_submittedApplication_returnsConflict() {
-        UUID applicationId = applicationRepository.save(submittedApplication()).getId();
+        UUID applicationId = applicationRepository.save(submittedApplication(CUSTOMER_SUBJECT)).getId();
 
         issueContract(applicationId)
                 .expectStatus().isEqualTo(409)
@@ -126,6 +129,110 @@ class ContractControllerTest extends IntegrationTest {
         assertThat(contractRepository.findAll()).isEmpty();
     }
 
+    @Test
+    void getById_ownContract_returnsOkWithRegistration() {
+        Contract contract = saveIssuedContract(CUSTOMER_SUBJECT);
+
+        client.get()
+                .uri("/api/v1/contracts/{id}", contract.getId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(CUSTOMER_SUBJECT, "customer"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.id").isEqualTo(contract.getId().toString())
+                .jsonPath("$.registration.status").isEqualTo("PENDING")
+                .jsonPath("$.registration.attempts").isEqualTo(0);
+    }
+
+    @Test
+    void getById_otherCustomersContract_returnsNotFound() {
+        Contract contract = saveIssuedContract(CUSTOMER_SUBJECT);
+
+        client.get()
+                .uri("/api/v1/contracts/{id}", contract.getId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(OTHER_CUSTOMER_SUBJECT, "customer"))
+                .exchange()
+                .expectStatus().isNotFound()
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("NOT_FOUND");
+    }
+
+    @Test
+    void getById_underwriter_returnsOk() {
+        Contract contract = saveIssuedContract(CUSTOMER_SUBJECT);
+
+        client.get()
+                .uri("/api/v1/contracts/{id}", contract.getId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.id").isEqualTo(contract.getId().toString());
+    }
+
+    @Test
+    void list_customer_returnsOnlyOwnContracts() {
+        saveIssuedContract(CUSTOMER_SUBJECT);
+        saveIssuedContract(OTHER_CUSTOMER_SUBJECT);
+
+        client.get()
+                .uri("/api/v1/contracts")
+                .header(HttpHeaders.AUTHORIZATION, bearer(CUSTOMER_SUBJECT, "customer"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.page.totalElements").isEqualTo(1)
+                .jsonPath("$.content[0].policyholderSubject").isEqualTo(CUSTOMER_SUBJECT)
+                .jsonPath("$.content[0].registration.status").isEqualTo("PENDING");
+    }
+
+    @Test
+    void list_withRegistrationStatusFilter_returnsMatchingOnly() {
+        saveIssuedContract(CUSTOMER_SUBJECT);
+
+        client.get()
+                .uri("/api/v1/contracts?registrationStatus=PENDING")
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.page.totalElements").isEqualTo(1);
+
+        client.get()
+                .uri("/api/v1/contracts?registrationStatus=REGISTERED")
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.page.totalElements").isEqualTo(0);
+    }
+
+    @Test
+    void list_withContractNumberFilter_returnsMatchingOnly() {
+        Contract wanted = saveIssuedContract(CUSTOMER_SUBJECT);
+        saveIssuedContract(CUSTOMER_SUBJECT);
+
+        client.get()
+                .uri("/api/v1/contracts?contractNumber={number}", wanted.getContractNumber())
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.page.totalElements").isEqualTo(1)
+                .jsonPath("$.content[0].id").isEqualTo(wanted.getId().toString());
+    }
+
+    @Test
+    void list_unsupportedSortProperty_returnsBadRequest() {
+        client.get()
+                .uri("/api/v1/contracts?sort=premium")
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("UNSUPPORTED_SORT");
+    }
+
     private void expectServiceBusy(UUID applicationId) {
         issueContract(applicationId)
                 .expectStatus().isEqualTo(503)
@@ -141,15 +248,29 @@ class ContractControllerTest extends IntegrationTest {
                 .exchange();
     }
 
+    // Builds the same state as the issue endpoint, so read tests do not depend on it.
+    private Contract saveIssuedContract(String policyholderSubject) {
+        Application application = submittedApplication(policyholderSubject);
+        application.approve(UNDERWRITER_SUBJECT, Instant.now());
+        application.issueContract();
+        applicationRepository.save(application);
+
+        Instant now = Instant.now();
+        Contract contract = contractRepository.save(
+                Contract.issue(application, UNDERWRITER_SUBJECT, now, LocalDate.now(ZoneOffset.UTC)));
+        contractRegistrationRepository.save(ContractRegistration.pending(contract.getId(), now, null));
+        return contract;
+    }
+
     private UUID saveApprovedApplication() {
-        Application application = submittedApplication();
+        Application application = submittedApplication(CUSTOMER_SUBJECT);
         application.approve(UNDERWRITER_SUBJECT, Instant.now());
         return applicationRepository.save(application).getId();
     }
 
-    private static Application submittedApplication() {
+    private static Application submittedApplication(String applicantSubject) {
         return Application.submit(
-                CUSTOMER_SUBJECT,
+                applicantSubject,
                 "Ivan Petrov",
                 LocalDate.now().minusYears(36).minusDays(1),
                 "AB1234567",

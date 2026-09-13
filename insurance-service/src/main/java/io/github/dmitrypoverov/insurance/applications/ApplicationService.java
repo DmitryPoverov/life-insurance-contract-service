@@ -1,10 +1,9 @@
 package io.github.dmitrypoverov.insurance.applications;
 
+import io.github.dmitrypoverov.insurance.web.Paging;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -79,24 +78,17 @@ public class ApplicationService {
     @Transactional(readOnly = true)
     public Page<Application> findOwn(String applicantSubject, ApplicationFilter filter, Pageable pageable) {
         return applicationRepository.findAll(
-                ownedBy(applicantSubject).and(matches(filter)), withStableOrder(pageable));
+                ownedBy(applicantSubject).and(matches(filter)), Paging.withStableOrder(pageable));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasRole('UNDERWRITER')")
     public Page<Application> findAny(ApplicationFilter filter, Pageable pageable) {
-        return applicationRepository.findAll(matches(filter), withStableOrder(pageable));
+        return applicationRepository.findAll(matches(filter), Paging.withStableOrder(pageable));
     }
 
     private Application lockApplication(UUID id) {
         return applicationRepository.findWithLockById(id)
                 .orElseThrow(() -> new ApplicationNotFoundException(id));
-    }
-
-    private static Pageable withStableOrder(Pageable pageable) {
-        return PageRequest.of(
-                pageable.getPageNumber(),
-                pageable.getPageSize(),
-                pageable.getSort().and(Sort.by("id")));
     }
 }

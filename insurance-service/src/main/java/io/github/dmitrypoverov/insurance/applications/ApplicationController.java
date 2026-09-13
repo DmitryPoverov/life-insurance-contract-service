@@ -1,5 +1,6 @@
 package io.github.dmitrypoverov.insurance.applications;
 
+import io.github.dmitrypoverov.insurance.security.Roles;
 import io.github.dmitrypoverov.insurance.web.SortWhitelist;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,6 @@ import java.util.UUID;
 @RequestMapping("/api/v1/applications")
 public class ApplicationController {
 
-    private static final String UNDERWRITER_AUTHORITY = "ROLE_UNDERWRITER";
     private static final Set<String> SORTABLE_PROPERTIES = Set.of("createdAt", "coverageAmount");
 
     private final ApplicationService applicationService;
@@ -54,7 +54,7 @@ public class ApplicationController {
             Authentication authentication) {
 
         SortWhitelist.requireAllowed(pageable, SORTABLE_PROPERTIES);
-        Page<Application> page = isUnderwriter(authentication)
+        Page<Application> page = Roles.isUnderwriter(authentication)
                 ? applicationService.findAny(filter, pageable)
                 : applicationService.findOwn(authentication.getName(), filter, pageable);
         return new PagedModel<>(page.map(applicationMapper::toResponse));
@@ -63,7 +63,7 @@ public class ApplicationController {
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'UNDERWRITER')")
     ResponseEntity<ApplicationResponse> getById(@PathVariable UUID id, Authentication authentication) {
-        Application application = isUnderwriter(authentication)
+        Application application = Roles.isUnderwriter(authentication)
                 ? applicationService.getAnyById(id)
                 : applicationService.getOwnById(id, authentication.getName());
         return ResponseEntity.ok(applicationMapper.toResponse(application));
@@ -83,10 +83,5 @@ public class ApplicationController {
             Authentication authentication) {
         return applicationMapper.toResponse(
                 applicationService.reject(id, authentication.getName(), request.reason()));
-    }
-
-    private boolean isUnderwriter(Authentication authentication) {
-        return authentication.getAuthorities().stream()
-                .anyMatch(authority -> UNDERWRITER_AUTHORITY.equals(authority.getAuthority()));
     }
 }

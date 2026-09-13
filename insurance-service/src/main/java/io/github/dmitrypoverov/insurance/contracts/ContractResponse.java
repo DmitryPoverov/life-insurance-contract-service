@@ -18,5 +18,6 @@ public record ContractResponse(
         LocalDate startDate,
         LocalDate endDate,
         Instant issuedAt,
-        String issuedBySubject) {
+        String issuedBySubject,
+        ContractRegistrationResponse registration) {
 }
