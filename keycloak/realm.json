@@ -3,6 +3,7 @@
   "enabled": true,
   "sslRequired": "none",
   "accessTokenLifespan": 3600,
+  "ssoSessionIdleTimeout": 3600,
   "roles": {
     "realm": [
       { "name": "customer" },

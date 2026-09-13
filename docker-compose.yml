@@ -75,6 +75,21 @@ services:
       retries: 12
       start_period: 30s
 
+  registry-emulator:
+    build:
+      context: .
+      dockerfile: registry-emulator/Dockerfile
+    environment:
+      SERVER_PORT: 8080
+    ports:
+      - "${REGISTRY_EMULATOR_PORT}:8080"
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/actuator/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
 volumes:
   postgres-insurance-data:
   postgres-registry-data:
