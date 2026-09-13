@@ -2,6 +2,7 @@ package io.github.dmitrypoverov.insurance.contracts;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.jayway.jsonpath.JsonPath;
 import io.github.dmitrypoverov.insurance.applications.Application;
 import io.github.dmitrypoverov.insurance.applications.ApplicationRepository;
 import io.github.dmitrypoverov.insurance.applications.ApplicationStatus;
@@ -72,12 +73,17 @@ class ContractControllerTest extends IntegrationTest {
     @Test
     void issue_repeatedRequest_returnsOkWithSameContract() {
         UUID applicationId = saveApprovedApplication();
-        issueContract(applicationId).expectStatus().isCreated();
+        String issued = issueContract(applicationId)
+                .expectStatus().isCreated()
+                .returnResult(String.class)
+                .getResponseBody();
 
         issueContract(applicationId)
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.applicationId").isEqualTo(applicationId.toString());
+                .jsonPath("$.applicationId").isEqualTo(applicationId.toString())
+                .jsonPath("$.contractNumber").isEqualTo(JsonPath.read(issued, "$.contractNumber"))
+                .jsonPath("$.issuedAt").isEqualTo(JsonPath.read(issued, "$.issuedAt"));
 
         assertThat(contractRepository.findAll()).hasSize(1);
         assertThat(contractRegistrationRepository.findAll()).hasSize(1);

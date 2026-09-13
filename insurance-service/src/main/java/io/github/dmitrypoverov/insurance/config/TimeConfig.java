@@ -6,16 +6,20 @@ import org.springframework.data.auditing.DateTimeProvider;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 @Configuration
 @EnableJpaAuditing(dateTimeProviderRef = "auditingDateTimeProvider")
 public class TimeConfig {
 
+    private static final Duration POSTGRES_TIMESTAMP_PRECISION = Duration.of(1, ChronoUnit.MICROS);
+
     @Bean
     Clock clock() {
-        return Clock.systemUTC();
+        return Clock.tick(Clock.systemUTC(), POSTGRES_TIMESTAMP_PRECISION);
     }
 
     @Bean

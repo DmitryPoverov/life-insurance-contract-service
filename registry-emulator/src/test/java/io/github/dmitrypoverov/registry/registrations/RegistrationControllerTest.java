@@ -3,6 +3,7 @@ package io.github.dmitrypoverov.registry.registrations;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.jayway.jsonpath.JsonPath;
 import io.github.dmitrypoverov.registry.emulator.EmulatorMode;
 import io.github.dmitrypoverov.registry.emulator.EmulatorModeSwitch;
 import io.github.dmitrypoverov.registry.support.IntegrationTest;
@@ -44,14 +45,16 @@ class RegistrationControllerTest extends IntegrationTest {
     @Test
     void register_sameContractTwice_returnsOkWithSameRecord() {
         UUID contractId = UUID.randomUUID();
-        register(contractId).expectStatus().isCreated();
-        Registration first = registrationRepository.findByContractId(contractId).orElseThrow();
+        String created = register(contractId)
+                .expectStatus().isCreated()
+                .returnResult(String.class)
+                .getResponseBody();
 
         register(contractId)
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.registryRecordId").isEqualTo(first.getRegistryRecordId())
-                .jsonPath("$.registeredAt").isEqualTo(first.getRegisteredAt().toString());
+                .jsonPath("$.registryRecordId").isEqualTo(JsonPath.read(created, "$.registryRecordId"))
+                .jsonPath("$.registeredAt").isEqualTo(JsonPath.read(created, "$.registeredAt"));
 
         assertThat(registrationRepository.findAll()).hasSize(1);
     }
