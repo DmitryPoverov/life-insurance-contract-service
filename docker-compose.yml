@@ -86,8 +86,14 @@ services:
       dockerfile: registry-emulator/Dockerfile
     environment:
       SERVER_PORT: 8080
+      DB_URL: jdbc:postgresql://postgres-registry:5432/${REGISTRY_DB_NAME}
+      DB_USERNAME: ${REGISTRY_DB_USER}
+      DB_PASSWORD: ${REGISTRY_DB_PASSWORD}
     ports:
       - "${REGISTRY_EMULATOR_PORT}:8080"
+    depends_on:
+      postgres-registry:
+        condition: service_healthy
     healthcheck:
       test: [ "CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080/actuator/health" ]
       interval: 10s

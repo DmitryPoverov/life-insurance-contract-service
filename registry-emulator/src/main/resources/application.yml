@@ -1,6 +1,20 @@
 spring:
   application:
     name: registry-emulator
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:15433/registry}
+    username: ${DB_USERNAME:registry}
+    password: ${DB_PASSWORD:registry}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+  data:
+    web:
+      pageable:
+        max-page-size: 100
 
 server:
   port: 8082
@@ -10,3 +24,7 @@ management:
     web:
       exposure:
         include: health
+
+registry:
+  emulator:
+    default-slow-delay: 10s

@@ -43,8 +43,6 @@ final class ContractSpecifications {
         return (root, query, cb) -> cb.exists(registrationWithStatus(root, query, cb, status));
     }
 
-    // There is no JPA association between a contract and its registration, so the status is checked
-    // with "exists (select ... from contract_registration where contract_id = contract.id and status = ?)".
     private static Subquery<UUID> registrationWithStatus(Root<Contract> contract, CriteriaQuery<?> query,
                                                          CriteriaBuilder cb, RegistrationStatus status) {
         Subquery<UUID> subquery = query.subquery(UUID.class);

@@ -58,8 +58,6 @@ class ContractConcurrentIssueTest extends IntegrationTest {
             }
         }
 
-        // One 201 and seven 200 means the lock serialized the requests.
-        // Any other status would mean a duplicate reached the unique index or a request failed.
         assertThat(outcomes)
                 .extracting(IssueOutcome::status)
                 .containsExactlyInAnyOrder(201, 200, 200, 200, 200, 200, 200, 200);

@@ -16,9 +16,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Подписывает токены тестовым ключом и отдаёт декодер к нему: Keycloak в тестах не нужен.
- */
 public final class TestJwtTokens {
 
     private static final RSAKey KEY = generateKey();

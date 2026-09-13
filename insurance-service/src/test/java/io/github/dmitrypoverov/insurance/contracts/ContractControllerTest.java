@@ -248,7 +248,6 @@ class ContractControllerTest extends IntegrationTest {
                 .exchange();
     }
 
-    // Builds the same state as the issue endpoint, so read tests do not depend on it.
     private Contract saveIssuedContract(String policyholderSubject) {
         Application application = submittedApplication(policyholderSubject);
         application.approve(UNDERWRITER_SUBJECT, Instant.now());

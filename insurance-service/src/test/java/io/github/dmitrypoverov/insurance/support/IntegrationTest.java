@@ -34,7 +34,6 @@ public abstract class IntegrationTest {
         client = RestTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
     }
 
-    // Children before parents: foreign keys reject deleting a referenced row.
     private void cleanDatabase() {
         contractRegistrationRepository.deleteAllInBatch();
         contractRepository.deleteAllInBatch();

@@ -67,7 +67,6 @@ public class ContractService {
         return new ContractDetails(contract, registration);
     }
 
-    // One query for the registrations of the whole page instead of one query per contract.
     private Page<ContractDetails> withRegistrations(Page<Contract> contracts) {
         List<UUID> contractIds = contracts.map(Contract::getId).toList();
         Map<UUID, ContractRegistration> registrationsByContractId = contractRegistrationRepository
