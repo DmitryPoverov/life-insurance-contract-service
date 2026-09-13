@@ -69,6 +69,22 @@ public class ApplicationController {
         return ResponseEntity.ok(applicationMapper.toResponse(application));
     }
 
+    @PostMapping("/{id}/approve")
+    @PreAuthorize("hasRole('UNDERWRITER')")
+    ApplicationResponse approve(@PathVariable UUID id, Authentication authentication) {
+        return applicationMapper.toResponse(applicationService.approve(id, authentication.getName()));
+    }
+
+    @PostMapping("/{id}/reject")
+    @PreAuthorize("hasRole('UNDERWRITER')")
+    ApplicationResponse reject(
+            @PathVariable UUID id,
+            @Valid @RequestBody ApplicationRejectRequest request,
+            Authentication authentication) {
+        return applicationMapper.toResponse(
+                applicationService.reject(id, authentication.getName(), request.reason()));
+    }
+
     private boolean isUnderwriter(Authentication authentication) {
         return authentication.getAuthorities().stream()
                 .anyMatch(authority -> UNDERWRITER_AUTHORITY.equals(authority.getAuthority()));

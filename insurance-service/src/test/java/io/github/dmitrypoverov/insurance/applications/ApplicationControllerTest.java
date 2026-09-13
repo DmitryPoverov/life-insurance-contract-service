@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import io.github.dmitrypoverov.insurance.support.IntegrationTest;
 import io.github.dmitrypoverov.insurance.support.TestJwtTokens;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.UUID;
@@ -197,10 +198,10 @@ class ApplicationControllerTest extends IntegrationTest {
     void list_withStatusAndCoverageFilters_returnsMatchingOnly() {
         applicationRepository.save(newApplication(CUSTOMER_SUBJECT, new BigDecimal("1000000.00")));
         Application approvedSmall = newApplication(CUSTOMER_SUBJECT, new BigDecimal("50000.00"));
-        approvedSmall.approve(UNDERWRITER_SUBJECT);
+        approvedSmall.approve(UNDERWRITER_SUBJECT, Instant.now());
         applicationRepository.save(approvedSmall);
         Application approvedLarge = newApplication(CUSTOMER_SUBJECT, new BigDecimal("1000000.00"));
-        approvedLarge.approve(UNDERWRITER_SUBJECT);
+        approvedLarge.approve(UNDERWRITER_SUBJECT, Instant.now());
         Application expected = applicationRepository.save(approvedLarge);
 
         client.get()
@@ -267,6 +268,115 @@ class ApplicationControllerTest extends IntegrationTest {
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.page.size").isEqualTo(100);
+    }
+
+    @Test
+    void approve_submittedApplication_returnsApproved() {
+        Application application = saveApplicationOf(CUSTOMER_SUBJECT);
+
+        client.post()
+                .uri("/api/v1/applications/{id}/approve", application.getId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.status").isEqualTo("APPROVED")
+                .jsonPath("$.decidedBySubject").isEqualTo(UNDERWRITER_SUBJECT)
+                .jsonPath("$.decidedAt").exists();
+    }
+
+    @Test
+    void approve_withCustomerToken_returnsForbidden() {
+        Application application = saveApplicationOf(CUSTOMER_SUBJECT);
+
+        client.post()
+                .uri("/api/v1/applications/{id}/approve", application.getId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(CUSTOMER_SUBJECT, "customer"))
+                .exchange()
+                .expectStatus().isForbidden()
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("ACCESS_DENIED");
+    }
+
+    @Test
+    void approve_nonExistentId_returnsNotFound() {
+        client.post()
+                .uri("/api/v1/applications/{id}/approve", UUID.randomUUID())
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .exchange()
+                .expectStatus().isNotFound()
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("NOT_FOUND");
+    }
+
+    @Test
+    void approve_rejectedApplication_returnsConflict() {
+        Application application = newApplication(CUSTOMER_SUBJECT, new BigDecimal("1000000.00"));
+        application.reject(UNDERWRITER_SUBJECT, "Incomplete documents", Instant.now());
+        Application saved = applicationRepository.save(application);
+
+        client.post()
+                .uri("/api/v1/applications/{id}/approve", saved.getId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .exchange()
+                .expectStatus().isEqualTo(409)
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("CONFLICT");
+    }
+
+    @Test
+    void reject_submittedApplication_returnsRejectedWithReason() {
+        Application application = saveApplicationOf(CUSTOMER_SUBJECT);
+
+        client.post()
+                .uri("/api/v1/applications/{id}/reject", application.getId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("""
+                        { "reason": "Incomplete documents" }
+                        """)
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.status").isEqualTo("REJECTED")
+                .jsonPath("$.rejectionReason").isEqualTo("Incomplete documents");
+    }
+
+    @Test
+    void reject_withBlankReason_returnsValidationFailed() {
+        Application application = saveApplicationOf(CUSTOMER_SUBJECT);
+
+        client.post()
+                .uri("/api/v1/applications/{id}/reject", application.getId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("""
+                        { "reason": " " }
+                        """)
+                .exchange()
+                .expectStatus().isBadRequest()
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("VALIDATION_FAILED")
+                .jsonPath("$.errors.reason").exists();
+    }
+
+    @Test
+    void reject_approvedApplication_returnsConflict() {
+        Application application = newApplication(CUSTOMER_SUBJECT, new BigDecimal("1000000.00"));
+        application.approve(UNDERWRITER_SUBJECT, Instant.now());
+        Application saved = applicationRepository.save(application);
+
+        client.post()
+                .uri("/api/v1/applications/{id}/reject", saved.getId())
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body("""
+                        { "reason": "Changed my mind" }
+                        """)
+                .exchange()
+                .expectStatus().isEqualTo(409)
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("CONFLICT");
     }
 
     private Application saveApplicationOf(String applicantSubject) {

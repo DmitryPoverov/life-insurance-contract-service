@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -48,6 +49,20 @@ public class ApplicationService {
         return applicationRepository.save(application);
     }
 
+    @Transactional
+    public Application approve(UUID id, String underwriterSubject) {
+        Application application = lockApplication(id);
+        application.approve(underwriterSubject, Instant.now(clock));
+        return application;
+    }
+
+    @Transactional
+    public Application reject(UUID id, String underwriterSubject, String reason) {
+        Application application = lockApplication(id);
+        application.reject(underwriterSubject, reason, Instant.now(clock));
+        return application;
+    }
+
     @Transactional(readOnly = true)
     public Application getOwnById(UUID id, String applicantSubject) {
         return applicationRepository.findOne(hasId(id).and(ownedBy(applicantSubject)))
@@ -71,6 +86,11 @@ public class ApplicationService {
     @PreAuthorize("hasRole('UNDERWRITER')")
     public Page<Application> findAny(ApplicationFilter filter, Pageable pageable) {
         return applicationRepository.findAll(matches(filter), withStableOrder(pageable));
+    }
+
+    private Application lockApplication(UUID id) {
+        return applicationRepository.findWithLockById(id)
+                .orElseThrow(() -> new ApplicationNotFoundException(id));
     }
 
     private static Pageable withStableOrder(Pageable pageable) {

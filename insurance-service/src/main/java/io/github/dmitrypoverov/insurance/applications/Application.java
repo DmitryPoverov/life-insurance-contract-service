@@ -86,17 +86,17 @@ public class Application {
         return application;
     }
 
-    public void approve(String underwriterSubject) {
+    public void approve(String underwriterSubject, Instant decidedAt) {
         changeStatus(ApplicationStatus.APPROVED);
-        decidedBySubject = underwriterSubject;
-        decidedAt = Instant.now();
+        this.decidedBySubject = underwriterSubject;
+        this.decidedAt = decidedAt;
     }
 
-    public void reject(String underwriterSubject, String reason) {
+    public void reject(String underwriterSubject, String reason, Instant decidedAt) {
         changeStatus(ApplicationStatus.REJECTED);
-        decidedBySubject = underwriterSubject;
-        decidedAt = Instant.now();
-        rejectionReason = reason;
+        this.decidedBySubject = underwriterSubject;
+        this.decidedAt = decidedAt;
+        this.rejectionReason = reason;
     }
 
     public void issueContract() {
