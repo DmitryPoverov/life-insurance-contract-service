@@ -16,7 +16,9 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) {
+    SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                            ProblemDetailAuthenticationEntryPoint authenticationEntryPoint,
+                                            ProblemDetailAccessDeniedHandler accessDeniedHandler) {
         // CSRF не нужен, т.к. используем bearer-токен в заголовке Authorization, его ставит только код
         // клиента, браузер сам такой заголовок не добавляет.
         // В цепочке фильтров используется SessionCreationPolicy.STATELESS, поэтому сессий и cookie нет.
@@ -36,9 +38,17 @@ public class SecurityConfig {
                                         .permitAll()
                                         .anyRequest()
                                         .authenticated())
+                .exceptionHandling(
+                        exceptionHandling ->
+                                exceptionHandling
+                                        .authenticationEntryPoint(authenticationEntryPoint)
+                                        .accessDeniedHandler(accessDeniedHandler))
                 .oauth2ResourceServer(
-                        oauth2 -> oauth2.jwt(
-                                jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
+                        oauth2 -> oauth2
+                                // oauth2ResourceServer регистрирует свою точку входа для сбоёв
+                                // bearer-токена и без явного переопределения забивает ту, что задана выше.
+                                .authenticationEntryPoint(authenticationEntryPoint)
+                                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
                 .build();
     }
 
