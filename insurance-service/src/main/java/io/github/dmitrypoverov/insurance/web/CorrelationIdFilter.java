@@ -12,6 +12,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -20,11 +21,13 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
     public static final String REQUEST_ID_HEADER = "X-Request-Id";
     public static final String REQUEST_ID_MDC_KEY = "requestId";
 
+    private static final Pattern REQUEST_ID_PATTERN = Pattern.compile("[A-Za-z0-9-]{1,64}");
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         String requestId = request.getHeader(REQUEST_ID_HEADER);
-        if (requestId == null || requestId.isBlank()) {
+        if (requestId == null || !REQUEST_ID_PATTERN.matcher(requestId).matches()) {
             requestId = UUID.randomUUID().toString();
         }
 

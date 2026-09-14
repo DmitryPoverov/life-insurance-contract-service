@@ -1,6 +1,9 @@
 package io.github.dmitrypoverov.insurance.registrations;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.aResponse;
+import static com.github.tomakehurst.wiremock.client.WireMock.equalTo;
+import static com.github.tomakehurst.wiremock.client.WireMock.postRequestedFor;
+import static com.github.tomakehurst.wiremock.client.WireMock.urlEqualTo;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.dmitrypoverov.insurance.applications.Application;
@@ -9,11 +12,13 @@ import io.github.dmitrypoverov.insurance.contracts.Contract;
 import io.github.dmitrypoverov.insurance.contracts.ContractRepository;
 import io.github.dmitrypoverov.insurance.support.IntegrationTest;
 import io.github.dmitrypoverov.insurance.support.RegistryStubs;
+import io.github.dmitrypoverov.insurance.web.CorrelationIdFilter;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.UUID;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -68,6 +73,18 @@ class RegistrationSchedulerTest extends IntegrationTest {
     }
 
     @Test
+    void processDueRegistrations_taskHasRequestId_propagatesToRegistryRequestHeader() {
+        String requestId = "sched-test-" + UUID.randomUUID();
+        saveIssuedContract(requestId);
+        RegistryStubs.respondWithRegistration(registry, 201);
+
+        registrationScheduler.processDueRegistrations();
+
+        registry.verify(postRequestedFor(urlEqualTo("/api/v1/registrations"))
+                .withHeader(CorrelationIdFilter.REQUEST_ID_HEADER, equalTo(requestId)));
+    }
+
+    @Test
     void processDueRegistrations_multiplePendingTasks_processesAllInOneTick() {
         Contract first = saveIssuedContract();
         Contract second = saveIssuedContract();
@@ -86,6 +103,10 @@ class RegistrationSchedulerTest extends IntegrationTest {
     }
 
     private Contract saveIssuedContract() {
+        return saveIssuedContract(null);
+    }
+
+    private Contract saveIssuedContract(@Nullable String requestId) {
         Application application = Application.submit(
                 CUSTOMER_SUBJECT,
                 "Ivan Petrov",
@@ -101,7 +122,7 @@ class RegistrationSchedulerTest extends IntegrationTest {
         Instant now = Instant.now();
         Contract contract = contractRepository.save(
                 Contract.issue(application, UNDERWRITER_SUBJECT, now, LocalDate.now(ZoneOffset.UTC)));
-        contractRegistrationRepository.save(ContractRegistration.pending(contract.getId(), now, null));
+        contractRegistrationRepository.save(ContractRegistration.pending(contract.getId(), now, requestId));
         return contract;
     }
 }
