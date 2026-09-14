@@ -140,3 +140,29 @@
 4. `docker compose up -d --force-recreate insurance-service` - пересоздаёт контейнер целиком (новый container ID), а не просто перезапускает процесс в старом, ближе к замене пода в Kubernetes.
 5. `docker compose start registry-emulator`.
 6. Подождать, `GET /api/v1/contracts/{contractId}` - `REGISTERED`. Договор довёл до конца уже новый экземпляр сервиса, а не тот, что его создавал.
+
+### Переключение режима эмулятора реестра
+
+`registry-emulator` воспроизводит четыре сценария из задания (и `SLOW` сверху), режим переключается напрямую HTTP-вызовом - у эмулятора нет Swagger UI, это не наш сервис, а стенд-двойник внешней системы.
+
+- `GET http://localhost:8082/api/v1/emulator/mode` - текущий режим.
+- `POST http://localhost:8082/api/v1/emulator/mode` с телом `{"mode": "..."}` - переключить.
+
+```bash
+# успешная регистрация (режим по умолчанию)
+curl -X POST http://localhost:8082/api/v1/emulator/mode -H "Content-Type: application/json" -d '{"mode":"SUCCESS"}'
+
+# бизнес-отказ - договор попадёт в REJECTED
+curl -X POST http://localhost:8082/api/v1/emulator/mode -H "Content-Type: application/json" -d '{"mode":"BUSINESS_ERROR"}'
+
+# техническая ошибка (500) - повторяемая, договор останется PENDING
+curl -X POST http://localhost:8082/api/v1/emulator/mode -H "Content-Type: application/json" -d '{"mode":"TECHNICAL_ERROR"}'
+
+# недоступность (503) - то же самое, что docker compose stop registry-emulator
+curl -X POST http://localhost:8082/api/v1/emulator/mode -H "Content-Type: application/json" -d '{"mode":"UNAVAILABLE"}'
+
+# искусственная задержка ответа, по умолчанию 10 секунд
+curl -X POST http://localhost:8082/api/v1/emulator/mode -H "Content-Type: application/json" -d '{"mode":"SLOW","slowDelaySeconds":5}'
+```
+
+Режим действует сразу для всех последующих вызовов. После рестарта снова `SUCCESS`.
