@@ -12,6 +12,7 @@ import io.github.dmitrypoverov.insurance.registrations.RegistrationStatus;
 import io.github.dmitrypoverov.insurance.registrations.RegistryRecord;
 import io.github.dmitrypoverov.insurance.support.IntegrationTest;
 import io.github.dmitrypoverov.insurance.support.TestJwtTokens;
+import io.github.dmitrypoverov.insurance.web.CorrelationIdFilter;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -69,6 +70,35 @@ class ContractControllerTest extends IntegrationTest {
         assertThat(registrations).hasSize(1);
         assertThat(registrations.getFirst().getContractId()).isEqualTo(contracts.getFirst().getId());
         assertThat(registrations.getFirst().getStatus()).isEqualTo(RegistrationStatus.PENDING);
+    }
+
+    @Test
+    void issue_withRequestIdHeader_propagatesToResponseAndRegistration() {
+        UUID applicationId = saveApprovedApplication();
+        String requestId = "test-" + UUID.randomUUID();
+
+        client.post()
+                .uri("/api/v1/applications/{id}/contract", applicationId)
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .header(CorrelationIdFilter.REQUEST_ID_HEADER, requestId)
+                .exchange()
+                .expectStatus().isCreated()
+                .expectHeader().valueEquals(CorrelationIdFilter.REQUEST_ID_HEADER, requestId);
+
+        ContractRegistration registration = contractRegistrationRepository.findAll().getFirst();
+        assertThat(registration.getRequestId()).isEqualTo(requestId);
+    }
+
+    @Test
+    void issue_withoutRequestIdHeader_generatesOne() {
+        UUID applicationId = saveApprovedApplication();
+
+        issueContract(applicationId)
+                .expectStatus().isCreated()
+                .expectHeader().exists(CorrelationIdFilter.REQUEST_ID_HEADER);
+
+        ContractRegistration registration = contractRegistrationRepository.findAll().getFirst();
+        assertThat(registration.getRequestId()).isNotNull();
     }
 
     @Test

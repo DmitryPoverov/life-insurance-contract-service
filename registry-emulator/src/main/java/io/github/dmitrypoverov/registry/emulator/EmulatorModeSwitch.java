@@ -1,5 +1,6 @@
 package io.github.dmitrypoverov.registry.emulator;
 
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -7,6 +8,7 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 
+@Slf4j
 @Component
 public class EmulatorModeSwitch {
 
@@ -24,7 +26,8 @@ public class EmulatorModeSwitch {
 
     public ActiveMode switchTo(EmulatorMode mode, @Nullable Duration slowDelay) {
         ActiveMode switched = new ActiveMode(mode, slowDelay != null ? slowDelay : defaultSlowDelay);
-        activeMode.set(switched);
+        ActiveMode previous = activeMode.getAndSet(switched);
+        log.info("Emulator mode switched from {} to {}", previous.mode(), mode);
         return switched;
     }
 }

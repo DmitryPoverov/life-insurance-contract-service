@@ -19,6 +19,10 @@ spring:
 server:
   port: 8082
 
+logging:
+  pattern:
+    correlation: "[%X{requestId:-}] "
+
 management:
   endpoints:
     web:

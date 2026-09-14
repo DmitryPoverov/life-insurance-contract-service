@@ -14,18 +14,20 @@ public class ContractRegistrationSender {
     private final RegistrationOutcomeRecorder outcomeRecorder;
 
     public void send(ContractRegistration claimed) {
+        String contractNumber = null;
         RegistryRecord registryRecord;
         try {
             Contract contract = contractRepository.findById(claimed.getContractId()).orElseThrow();
+            contractNumber = contract.getContractNumber();
             registryRecord = registryClient.register(contract);
         } catch (RegistryRejectedException rejection) {
-            outcomeRecorder.recordRejected(claimed, describe(rejection));
+            outcomeRecorder.recordRejected(claimed, contractNumber, describe(rejection));
             return;
         } catch (PermanentRegistryException failure) {
-            outcomeRecorder.recordFailed(claimed, describe(failure));
+            outcomeRecorder.recordFailed(claimed, contractNumber, describe(failure));
             return;
         } catch (Exception retryableOrUnexpected) {
-            outcomeRecorder.recordRetry(claimed, describe(retryableOrUnexpected));
+            outcomeRecorder.recordRetry(claimed, contractNumber, describe(retryableOrUnexpected));
             return;
         }
 

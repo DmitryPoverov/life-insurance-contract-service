@@ -1,12 +1,14 @@
 package io.github.dmitrypoverov.insurance.contracts;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ContractIssuanceService {
@@ -21,7 +23,12 @@ public class ContractIssuanceService {
         }
 
         try {
-            return contractIssuer.issue(applicationId, underwriterSubject);
+            ContractIssueResult result = contractIssuer.issue(applicationId, underwriterSubject);
+            if (result.created()) {
+                log.info("Issued contract {} for application {}",
+                        result.contract().getContractNumber(), applicationId);
+            }
+            return result;
         } catch (PessimisticLockingFailureException lockTimeout) {
             return contractRepository.findByApplicationId(applicationId)
                     .map(ContractIssueResult::alreadyIssued)

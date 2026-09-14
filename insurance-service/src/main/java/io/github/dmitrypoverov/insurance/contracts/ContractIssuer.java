@@ -6,7 +6,9 @@ import io.github.dmitrypoverov.insurance.applications.ApplicationRepository;
 import io.github.dmitrypoverov.insurance.applications.ApplicationStatus;
 import io.github.dmitrypoverov.insurance.registrations.ContractRegistration;
 import io.github.dmitrypoverov.insurance.registrations.ContractRegistrationRepository;
+import io.github.dmitrypoverov.insurance.web.CorrelationIdFilter;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,7 +43,7 @@ class ContractIssuer {
         Contract contract = contractRepository.save(
                 Contract.issue(application, underwriterSubject, now, startDate));
         contractRegistrationRepository.save(
-                ContractRegistration.pending(contract.getId(), now, null));
+                ContractRegistration.pending(contract.getId(), now, MDC.get(CorrelationIdFilter.REQUEST_ID_MDC_KEY)));
 
         return ContractIssueResult.newlyIssued(contract);
     }

@@ -1,6 +1,8 @@
 package io.github.dmitrypoverov.insurance.registrations;
 
+import io.github.dmitrypoverov.insurance.web.CorrelationIdFilter;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -23,7 +25,19 @@ class RegistrationScheduler {
             if (claimed.isEmpty()) {
                 return;
             }
-            sender.send(claimed.get());
+            sendWithCorrelation(claimed.get());
+        }
+    }
+
+    private void sendWithCorrelation(ContractRegistration claimed) {
+        String requestId = claimed.getRequestId();
+        if (requestId != null) {
+            MDC.put(CorrelationIdFilter.REQUEST_ID_MDC_KEY, requestId);
+        }
+        try {
+            sender.send(claimed);
+        } finally {
+            MDC.remove(CorrelationIdFilter.REQUEST_ID_MDC_KEY);
         }
     }
 }
