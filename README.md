@@ -98,7 +98,7 @@
 ### Сценарий пользователя
 
 1. Авторизоваться `customer1` / `customer1`.
-2. `POST /api/v1/applications` → Try it out → тело:
+2. `POST /api/v1/applications` → Try it out → тело, например:
    ```json
    {
      "insuredFullName": "Иван Петров",
