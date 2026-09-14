@@ -84,7 +84,6 @@
 
 ## Порядок запуска приложения
 
--  установить Docker с Docker Compose
 - `docker compose build`
 - `docker compose up` 
   - или одной командой `docker compose up -d --build --wait`
