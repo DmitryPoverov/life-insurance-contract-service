@@ -122,25 +122,51 @@
 
 ### Проверка недоступности реестра
 
-Нужна свежая заявка - уже выпущенный договор из основного сценария не подойдёт (либо не одобрится повторно, либо выпустится ещё раз тем же самым, уже зарегистрированным договором).
+Нужна свежая заявка.
 
-1. В терминале: `docker compose stop registry-emulator`.
-2. Заново пройти шаг 2 сценария пользователя (создать новую заявку от `customer1`).
-3. Logout, залогиниться `underwriter1` / `underwriter1`, пройти шаги 3-4 сценария работника (одобрить, выпустить) - получить новый договор, `registration.status = PENDING`.
-4. Несколько раз `GET /api/v1/contracts/{contractId}` с паузой - `attempts` растёт, статус остаётся `PENDING`.
-5. `docker compose start registry-emulator`.
-6. Через несколько секунд `GET` снова - статус сам станет `REGISTERED`, без повторных действий.
+1. `docker compose stop registry-emulator`.
+2. Авторизоваться `customer1` / `customer1`.
+3. `POST /api/v1/applications` → Try it out → тело, например:
+   ```json
+   {
+     "insuredFullName": "Иван Петров",
+     "insuredBirthDate": "1990-05-15",
+     "insuredDocumentNumber": "AB1234567",
+     "coverageAmount": 1000000,
+     "termYears": 10
+   }
+   ```
+4. Execute - 201, из ответа взять `applicationId`.
+5. Открыть окно авторизации, Logout, залогиниться `underwriter1` / `underwriter1`.
+6. `POST /api/v1/applications/{applicationId}/approve` с этим `applicationId` - статус становится `APPROVED`.
+7. `POST /api/v1/applications/{applicationId}/contract` - 201, тело содержит `contractId` и `registration.status = PENDING`.
+8. Несколько раз `GET /api/v1/contracts/{contractId}` с паузой - `attempts` растёт, статус остаётся `PENDING`.
+9. `docker compose start registry-emulator`.
+10. Через несколько секунд `GET` снова - статус сам станет `REGISTERED`, без повторных действий.
 
 ### Проверка перезапуска сервиса
 
-Тоже нужна свежая заявка - по той же причине.
+Тоже нужна свежая заявка.
 
 1. `docker compose stop registry-emulator`.
-2. Заново пройти шаг 2 сценария пользователя (создать новую заявку от `customer1`).
-3. Logout, залогиниться `underwriter1` / `underwriter1`, пройти шаги 3-4 сценария работника - получить новый договор, `PENDING`.
-4. `docker compose up -d --force-recreate insurance-service` - пересоздаёт контейнер целиком (новый container ID), а не просто перезапускает процесс в старом, ближе к замене пода в Kubernetes.
-5. `docker compose start registry-emulator`.
-6. Подождать, `GET /api/v1/contracts/{contractId}` - `REGISTERED`. Договор довёл до конца уже новый экземпляр сервиса, а не тот, что его создавал.
+2. Авторизоваться `customer1` / `customer1`.
+3. `POST /api/v1/applications` → Try it out → тело, например:
+   ```json
+   {
+     "insuredFullName": "Иван Петров",
+     "insuredBirthDate": "1990-05-15",
+     "insuredDocumentNumber": "AB1234567",
+     "coverageAmount": 1000000,
+     "termYears": 10
+   }
+   ```
+4. Execute - 201, из ответа взять `applicationId`.
+5. Открыть окно авторизации, Logout, залогиниться `underwriter1` / `underwriter1`.
+6. `POST /api/v1/applications/{applicationId}/approve` с этим `applicationId` - статус становится `APPROVED`.
+7. `POST /api/v1/applications/{applicationId}/contract` - 201, тело содержит `contractId` и `registration.status = PENDING`.
+8. `docker compose up -d --force-recreate insurance-service` - пересоздаёт контейнер целиком (новый container ID), а не просто перезапускает процесс в старом, ближе к замене пода в Kubernetes.
+9. `docker compose start registry-emulator`.
+10. Подождать, `GET /api/v1/contracts/{contractId}` - `REGISTERED`. Договор довёл до конца уже новый экземпляр сервиса, а не тот, что его создавал.
 
 ### Переключение режима эмулятора реестра
 
