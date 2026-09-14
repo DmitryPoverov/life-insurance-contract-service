@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 public record ContractResponse(
-        UUID id,
+        UUID contractId,
         UUID applicationId,
         String contractNumber,
         String policyholderSubject,

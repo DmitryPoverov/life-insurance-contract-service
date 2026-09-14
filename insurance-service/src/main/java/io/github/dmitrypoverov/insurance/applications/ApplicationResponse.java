@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 public record ApplicationResponse(
-        UUID id,
+        UUID applicationId,
         String applicantSubject,
         String insuredFullName,
         LocalDate insuredBirthDate,

@@ -60,28 +60,28 @@ public class ApplicationController {
         return new PagedModel<>(page.map(applicationMapper::toResponse));
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{applicationId}")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'UNDERWRITER')")
-    ResponseEntity<ApplicationResponse> getById(@PathVariable UUID id, Authentication authentication) {
+    ResponseEntity<ApplicationResponse> getById(@PathVariable UUID applicationId, Authentication authentication) {
         Application application = Roles.isUnderwriter(authentication)
-                ? applicationService.getAnyById(id)
-                : applicationService.getOwnById(id, authentication.getName());
+                ? applicationService.getAnyById(applicationId)
+                : applicationService.getOwnById(applicationId, authentication.getName());
         return ResponseEntity.ok(applicationMapper.toResponse(application));
     }
 
-    @PostMapping("/{id}/approve")
+    @PostMapping("/{applicationId}/approve")
     @PreAuthorize("hasRole('UNDERWRITER')")
-    ApplicationResponse approve(@PathVariable UUID id, Authentication authentication) {
-        return applicationMapper.toResponse(applicationService.approve(id, authentication.getName()));
+    ApplicationResponse approve(@PathVariable UUID applicationId, Authentication authentication) {
+        return applicationMapper.toResponse(applicationService.approve(applicationId, authentication.getName()));
     }
 
-    @PostMapping("/{id}/reject")
+    @PostMapping("/{applicationId}/reject")
     @PreAuthorize("hasRole('UNDERWRITER')")
     ApplicationResponse reject(
-            @PathVariable UUID id,
+            @PathVariable UUID applicationId,
             @Valid @RequestBody ApplicationRejectRequest request,
             Authentication authentication) {
         return applicationMapper.toResponse(
-                applicationService.reject(id, authentication.getName(), request.reason()));
+                applicationService.reject(applicationId, authentication.getName(), request.reason()));
     }
 }

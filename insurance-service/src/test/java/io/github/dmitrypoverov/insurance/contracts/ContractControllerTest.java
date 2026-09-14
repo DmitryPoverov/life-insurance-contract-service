@@ -176,7 +176,7 @@ class ContractControllerTest extends IntegrationTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.id").isEqualTo(contract.getId().toString())
+                .jsonPath("$.contractId").isEqualTo(contract.getId().toString())
                 .jsonPath("$.registration.status").isEqualTo("PENDING")
                 .jsonPath("$.registration.attempts").isEqualTo(0);
     }
@@ -204,7 +204,7 @@ class ContractControllerTest extends IntegrationTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.id").isEqualTo(contract.getId().toString());
+                .jsonPath("$.contractId").isEqualTo(contract.getId().toString());
     }
 
     @Test
@@ -330,7 +330,7 @@ class ContractControllerTest extends IntegrationTest {
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.page.totalElements").isEqualTo(1)
-                .jsonPath("$.content[0].id").isEqualTo(wanted.getId().toString());
+                .jsonPath("$.content[0].contractId").isEqualTo(wanted.getId().toString());
     }
 
     @Test

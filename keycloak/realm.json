@@ -20,7 +20,8 @@
       "directAccessGrantsEnabled": true,
       "standardFlowEnabled": false,
       "implicitFlowEnabled": false,
-      "serviceAccountsEnabled": false
+      "serviceAccountsEnabled": false,
+      "webOrigins": ["*"]
     }
   ],
   "users": [

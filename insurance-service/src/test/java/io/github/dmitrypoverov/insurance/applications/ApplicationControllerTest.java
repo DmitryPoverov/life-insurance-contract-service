@@ -113,7 +113,7 @@ class ApplicationControllerTest extends IntegrationTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.id").isEqualTo(application.getId().toString())
+                .jsonPath("$.applicationId").isEqualTo(application.getId().toString())
                 .jsonPath("$.applicantSubject").isEqualTo(CUSTOMER_SUBJECT);
     }
 
@@ -140,7 +140,7 @@ class ApplicationControllerTest extends IntegrationTest {
                 .exchange()
                 .expectStatus().isOk()
                 .expectBody()
-                .jsonPath("$.id").isEqualTo(application.getId().toString());
+                .jsonPath("$.applicationId").isEqualTo(application.getId().toString());
     }
 
     @Test
@@ -211,7 +211,7 @@ class ApplicationControllerTest extends IntegrationTest {
                 .expectStatus().isOk()
                 .expectBody()
                 .jsonPath("$.page.totalElements").isEqualTo(1)
-                .jsonPath("$.content[0].id").isEqualTo(expected.getId().toString());
+                .jsonPath("$.content[0].applicationId").isEqualTo(expected.getId().toString());
     }
 
     @Test

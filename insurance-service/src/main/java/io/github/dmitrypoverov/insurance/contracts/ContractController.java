@@ -38,24 +38,24 @@ public class ContractController {
         ContractResponse body = contractMapper.toResponse(contractService.detailsOf(result.contract()));
 
         if (result.created()) {
-            return ResponseEntity.created(URI.create("/api/v1/contracts/" + body.id())).body(body);
+            return ResponseEntity.created(URI.create("/api/v1/contracts/" + body.contractId())).body(body);
         }
         return ResponseEntity.ok(body);
     }
 
-    @GetMapping("/api/v1/contracts/{id}")
+    @GetMapping("/api/v1/contracts/{contractId}")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'UNDERWRITER')")
-    ContractResponse getById(@PathVariable UUID id, Authentication authentication) {
+    ContractResponse getById(@PathVariable UUID contractId, Authentication authentication) {
         ContractDetails details = Roles.isUnderwriter(authentication)
-                ? contractService.getAnyById(id)
-                : contractService.getOwnById(id, authentication.getName());
+                ? contractService.getAnyById(contractId)
+                : contractService.getOwnById(contractId, authentication.getName());
         return contractMapper.toResponse(details);
     }
 
-    @PostMapping("/api/v1/contracts/{id}/registration/retry")
+    @PostMapping("/api/v1/contracts/{contractId}/registration/retry")
     @PreAuthorize("hasRole('UNDERWRITER')")
-    ContractResponse retryRegistration(@PathVariable UUID id) {
-        return contractMapper.toResponse(contractService.retryRegistration(id));
+    ContractResponse retryRegistration(@PathVariable UUID contractId) {
+        return contractMapper.toResponse(contractService.retryRegistration(contractId));
     }
 
     @GetMapping("/api/v1/contracts")
