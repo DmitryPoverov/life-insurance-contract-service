@@ -201,6 +201,7 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
             case 401 -> ErrorCode.UNAUTHORIZED;
             case 403 -> ErrorCode.ACCESS_DENIED;
             case 404 -> ErrorCode.NOT_FOUND;
+            case 405 -> ErrorCode.METHOD_NOT_ALLOWED;
             case 409 -> ErrorCode.CONFLICT;
             default -> ErrorCode.INTERNAL_ERROR;
         };

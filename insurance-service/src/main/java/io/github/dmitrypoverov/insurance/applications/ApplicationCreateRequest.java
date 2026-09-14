@@ -10,5 +10,5 @@ public record ApplicationCreateRequest(
         @NotNull @Past LocalDate insuredBirthDate,
         @NotBlank @Size(max = 64) String insuredDocumentNumber,
         @NotNull @DecimalMin("10000.00") @DecimalMax("10000000.00") BigDecimal coverageAmount,
-        @Min(1) @Max(30) int termYears) {
+        @NotNull @Min(1) @Max(30) Integer termYears) {
 }

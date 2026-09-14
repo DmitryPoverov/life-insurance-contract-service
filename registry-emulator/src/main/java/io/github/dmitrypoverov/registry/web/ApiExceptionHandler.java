@@ -62,6 +62,36 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(exception, body, headers, status, request);
     }
 
+    @Override
+    protected @Nullable ResponseEntity<Object> handleExceptionInternal(Exception exception,
+                                                                       @Nullable Object body,
+                                                                       HttpHeaders headers,
+                                                                       HttpStatusCode statusCode,
+                                                                       WebRequest request) {
+        ResponseEntity<Object> response =
+                super.handleExceptionInternal(exception, body, headers, statusCode, request);
+        if (response != null && response.getBody() instanceof ProblemDetail problem) {
+            addCodeIfMissing(problem, statusCode);
+        }
+        return response;
+    }
+
+    private void addCodeIfMissing(ProblemDetail problem, HttpStatusCode statusCode) {
+        Map<String, Object> properties = problem.getProperties();
+        if (properties != null && properties.containsKey(CODE_PROPERTY)) {
+            return;
+        }
+        problem.setProperty(CODE_PROPERTY, defaultCode(statusCode).name());
+    }
+
+    private ErrorCode defaultCode(HttpStatusCode statusCode) {
+        return switch (statusCode.value()) {
+            case 400 -> ErrorCode.MALFORMED_REQUEST;
+            case 404 -> ErrorCode.NOT_FOUND;
+            default -> ErrorCode.TECHNICAL_ERROR;
+        };
+    }
+
     private @Nullable ResponseEntity<Object> problem(Exception exception,
                                                      HttpStatus status,
                                                      ErrorCode code,

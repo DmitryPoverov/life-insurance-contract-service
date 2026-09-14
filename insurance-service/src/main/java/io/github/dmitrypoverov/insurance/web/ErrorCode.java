@@ -6,6 +6,7 @@ public enum ErrorCode {
     UNAUTHORIZED,
     ACCESS_DENIED,
     NOT_FOUND,
+    METHOD_NOT_ALLOWED,
     CONFLICT,
     INTERNAL_ERROR,
     AGE_NOT_ELIGIBLE,
