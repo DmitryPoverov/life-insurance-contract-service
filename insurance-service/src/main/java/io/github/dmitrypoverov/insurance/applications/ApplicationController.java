@@ -36,9 +36,8 @@ public class ApplicationController {
 
     @PostMapping
     @PreAuthorize("hasRole('CUSTOMER')")
-    ResponseEntity<ApplicationResponse> create(
-            @Valid @RequestBody ApplicationCreateRequest request,
-            Authentication authentication) {
+    ResponseEntity<ApplicationResponse> create(@Valid @RequestBody ApplicationCreateRequest request,
+                                               Authentication authentication) {
 
         Application application = applicationService.create(authentication.getName(), request);
         return ResponseEntity.created(URI.create("/api/v1/applications/" + application.getId()))
@@ -47,11 +46,13 @@ public class ApplicationController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('CUSTOMER', 'UNDERWRITER')")
-    PagedModel<ApplicationResponse> list(
-            @ParameterObject ApplicationFilter filter,
-            @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC)
-            Pageable pageable,
-            Authentication authentication) {
+    PagedModel<ApplicationResponse> list(@ParameterObject ApplicationFilter filter,
+                                         @ParameterObject
+                                         @PageableDefault(size = 20,
+                                                 sort = "createdAt",
+                                                 direction = Sort.Direction.DESC)
+                                         Pageable pageable,
+                                         Authentication authentication) {
 
         SortWhitelist.requireAllowed(pageable, SORTABLE_PROPERTIES);
         Page<Application> page = Roles.isUnderwriter(authentication)
@@ -62,7 +63,9 @@ public class ApplicationController {
 
     @GetMapping("/{applicationId}")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'UNDERWRITER')")
-    ResponseEntity<ApplicationResponse> getById(@PathVariable UUID applicationId, Authentication authentication) {
+    ResponseEntity<ApplicationResponse> getById(@PathVariable UUID applicationId,
+                                                Authentication authentication) {
+
         Application application = Roles.isUnderwriter(authentication)
                 ? applicationService.getAnyById(applicationId)
                 : applicationService.getOwnById(applicationId, authentication.getName());
@@ -71,16 +74,18 @@ public class ApplicationController {
 
     @PostMapping("/{applicationId}/approve")
     @PreAuthorize("hasRole('UNDERWRITER')")
-    ApplicationResponse approve(@PathVariable UUID applicationId, Authentication authentication) {
+    ApplicationResponse approve(@PathVariable UUID applicationId,
+                                Authentication authentication) {
+
         return applicationMapper.toResponse(applicationService.approve(applicationId, authentication.getName()));
     }
 
     @PostMapping("/{applicationId}/reject")
     @PreAuthorize("hasRole('UNDERWRITER')")
-    ApplicationResponse reject(
-            @PathVariable UUID applicationId,
-            @Valid @RequestBody ApplicationRejectRequest request,
-            Authentication authentication) {
+    ApplicationResponse reject(@PathVariable UUID applicationId,
+                               @Valid @RequestBody ApplicationRejectRequest request,
+                               Authentication authentication) {
+
         return applicationMapper.toResponse(
                 applicationService.reject(applicationId, authentication.getName(), request.reason()));
     }

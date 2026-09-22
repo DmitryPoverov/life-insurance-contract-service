@@ -27,7 +27,9 @@ public class ApplicationService {
     private final Clock clock;
 
     @Transactional
-    public Application create(String applicantSubject, ApplicationCreateRequest request) {
+    public Application create(String applicantSubject,
+                              ApplicationCreateRequest request) {
+
         BigDecimal premium =
                 premiumCalculator.calculate(
                         request.coverageAmount(),
@@ -49,21 +51,28 @@ public class ApplicationService {
     }
 
     @Transactional
-    public Application approve(UUID id, String underwriterSubject) {
+    public Application approve(UUID id,
+                               String underwriterSubject) {
+
         Application application = lockApplication(id);
         application.approve(underwriterSubject, Instant.now(clock));
         return application;
     }
 
     @Transactional
-    public Application reject(UUID id, String underwriterSubject, String reason) {
+    public Application reject(UUID id,
+                              String underwriterSubject,
+                              String reason) {
+
         Application application = lockApplication(id);
         application.reject(underwriterSubject, reason, Instant.now(clock));
         return application;
     }
 
     @Transactional(readOnly = true)
-    public Application getOwnById(UUID id, String applicantSubject) {
+    public Application getOwnById(UUID id,
+                                  String applicantSubject) {
+
         return applicationRepository.findOne(hasId(id).and(ownedBy(applicantSubject)))
                 .orElseThrow(() -> new ApplicationNotFoundException(id));
     }
@@ -71,23 +80,30 @@ public class ApplicationService {
     @Transactional(readOnly = true)
     @PreAuthorize("hasRole('UNDERWRITER')")
     public Application getAnyById(UUID id) {
+
         return applicationRepository.findById(id)
                 .orElseThrow(() -> new ApplicationNotFoundException(id));
     }
 
     @Transactional(readOnly = true)
-    public Page<Application> findOwn(String applicantSubject, ApplicationFilter filter, Pageable pageable) {
+    public Page<Application> findOwn(String applicantSubject,
+                                     ApplicationFilter filter,
+                                     Pageable pageable) {
+
         return applicationRepository.findAll(
                 ownedBy(applicantSubject).and(matches(filter)), Paging.withStableOrder(pageable));
     }
 
     @Transactional(readOnly = true)
     @PreAuthorize("hasRole('UNDERWRITER')")
-    public Page<Application> findAny(ApplicationFilter filter, Pageable pageable) {
+    public Page<Application> findAny(ApplicationFilter filter,
+                                     Pageable pageable) {
+
         return applicationRepository.findAll(matches(filter), Paging.withStableOrder(pageable));
     }
 
     private Application lockApplication(UUID id) {
+
         return applicationRepository.findWithLockById(id)
                 .orElseThrow(() -> new ApplicationNotFoundException(id));
     }
