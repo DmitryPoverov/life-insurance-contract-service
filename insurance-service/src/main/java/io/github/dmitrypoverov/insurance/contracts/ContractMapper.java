@@ -2,37 +2,27 @@ package io.github.dmitrypoverov.insurance.contracts;
 
 import io.github.dmitrypoverov.insurance.registrations.ContractRegistration;
 import io.github.dmitrypoverov.insurance.registrations.RegistrationStatus;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Condition;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingConstants;
+import org.mapstruct.Named;
 
-@Component
-public class ContractMapper {
+@Mapper(componentModel = MappingConstants.ComponentModel.SPRING)
+public interface ContractMapper {
 
-    public ContractResponse toResponse(ContractDetails details) {
-        Contract contract = details.contract();
-        return new ContractResponse(
-                contract.getId(),
-                contract.getApplication().getId(),
-                contract.getContractNumber(),
-                contract.getPolicyholderSubject(),
-                contract.getInsuredFullName(),
-                contract.getInsuredBirthDate(),
-                contract.getInsuredDocumentNumber(),
-                contract.getCoverageAmount(),
-                contract.getPremium(),
-                contract.getStartDate(),
-                contract.getEndDate(),
-                contract.getIssuedAt(),
-                contract.getIssuedBySubject(),
-                toRegistrationResponse(details.registration()));
+    @Mapping(target = ".", source = "contract")
+    @Mapping(target = "contractId", source = "contract.id")
+    @Mapping(target = "applicationId", source = "contract.application.id")
+    ContractResponse toResponse(ContractDetails details);
+
+    @Mapping(target = "nextAttemptAt", conditionQualifiedByName = "pending")
+    ContractRegistrationResponse toRegistrationResponse(ContractRegistration registration);
+
+    @Condition
+    @Named("pending")
+    default boolean isPending(ContractRegistration registration) {
+        return registration.getStatus() == RegistrationStatus.PENDING;
     }
 
-    private ContractRegistrationResponse toRegistrationResponse(ContractRegistration registration) {
-        boolean pending = registration.getStatus() == RegistrationStatus.PENDING;
-        return new ContractRegistrationResponse(
-                registration.getStatus(),
-                registration.getAttempts(),
-                pending ? registration.getNextAttemptAt() : null,
-                registration.getRegistryRecordId(),
-                registration.getRegisteredAt());
-    }
 }

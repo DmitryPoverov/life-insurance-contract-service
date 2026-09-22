@@ -19,12 +19,15 @@ dependencies {
     implementation(libs.spring.boot.starter.data.jpa)
     implementation(libs.spring.boot.starter.liquibase)
     implementation(libs.spring.boot.starter.validation)
+    implementation(libs.mapstruct)
 
     runtimeOnly(libs.postgresql)
 
     compileOnly(libs.lombok)
 
     annotationProcessor(libs.lombok)
+    annotationProcessor(libs.mapstruct.processor)
+    annotationProcessor(libs.lombok.mapstruct.binding)
 
     testImplementation(libs.spring.boot.starter.webmvc.test)
     testImplementation(libs.spring.boot.testcontainers)
@@ -42,4 +45,8 @@ tasks.test {
 
 tasks.bootJar {
     archiveFileName = "application.jar"
+}
+
+tasks.compileJava {
+    options.compilerArgs.add("-Amapstruct.unmappedTargetPolicy=ERROR")
 }
