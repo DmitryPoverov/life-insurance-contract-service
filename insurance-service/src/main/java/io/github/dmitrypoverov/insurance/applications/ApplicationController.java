@@ -48,7 +48,8 @@ public class ApplicationController {
     @PreAuthorize("hasAnyRole('CUSTOMER', 'UNDERWRITER')")
     PagedModel<ApplicationResponse> list(@ParameterObject ApplicationFilter filter,
                                          @ParameterObject
-                                         @PageableDefault(size = 20,
+                                         @PageableDefault(
+                                                 size = 20,
                                                  sort = "createdAt",
                                                  direction = Sort.Direction.DESC)
                                          Pageable pageable,
@@ -63,13 +64,13 @@ public class ApplicationController {
 
     @GetMapping("/{applicationId}")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'UNDERWRITER')")
-    ResponseEntity<ApplicationResponse> getById(@PathVariable UUID applicationId,
-                                                Authentication authentication) {
+    ApplicationResponse getById(@PathVariable UUID applicationId,
+                                Authentication authentication) {
 
         Application application = Roles.isUnderwriter(authentication)
                 ? applicationService.getAnyById(applicationId)
                 : applicationService.getOwnById(applicationId, authentication.getName());
-        return ResponseEntity.ok(applicationMapper.toResponse(application));
+        return applicationMapper.toResponse(application);
     }
 
     @PostMapping("/{applicationId}/approve")
@@ -77,7 +78,8 @@ public class ApplicationController {
     ApplicationResponse approve(@PathVariable UUID applicationId,
                                 Authentication authentication) {
 
-        return applicationMapper.toResponse(applicationService.approve(applicationId, authentication.getName()));
+        Application approved = applicationService.approve(applicationId, authentication.getName());
+        return applicationMapper.toResponse(approved);
     }
 
     @PostMapping("/{applicationId}/reject")
@@ -86,7 +88,7 @@ public class ApplicationController {
                                @Valid @RequestBody ApplicationRejectRequest request,
                                Authentication authentication) {
 
-        return applicationMapper.toResponse(
-                applicationService.reject(applicationId, authentication.getName(), request.reason()));
+        Application rejected = applicationService.reject(applicationId, authentication.getName(), request.reason());
+        return applicationMapper.toResponse(rejected);
     }
 }

@@ -33,7 +33,9 @@ public class ContractController {
 
     @PostMapping("/api/v1/applications/{applicationId}/contract")
     @PreAuthorize("hasRole('UNDERWRITER')")
-    ResponseEntity<ContractResponse> issue(@PathVariable UUID applicationId, Authentication authentication) {
+    ResponseEntity<ContractResponse> issue(@PathVariable UUID applicationId,
+                                           Authentication authentication) {
+
         ContractIssueResult result = contractIssuanceService.issue(applicationId, authentication.getName());
         ContractResponse body = contractMapper.toResponse(contractService.detailsOf(result.contract()));
 
@@ -45,7 +47,9 @@ public class ContractController {
 
     @GetMapping("/api/v1/contracts/{contractId}")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'UNDERWRITER')")
-    ContractResponse getById(@PathVariable UUID contractId, Authentication authentication) {
+    ContractResponse getById(@PathVariable UUID contractId,
+                             Authentication authentication) {
+
         ContractDetails details = Roles.isUnderwriter(authentication)
                 ? contractService.getAnyById(contractId)
                 : contractService.getOwnById(contractId, authentication.getName());
@@ -55,16 +59,21 @@ public class ContractController {
     @PostMapping("/api/v1/contracts/{contractId}/registration/retry")
     @PreAuthorize("hasRole('UNDERWRITER')")
     ContractResponse retryRegistration(@PathVariable UUID contractId) {
-        return contractMapper.toResponse(contractService.retryRegistration(contractId));
+
+        ContractDetails details = contractService.retryRegistration(contractId);
+        return contractMapper.toResponse(details);
     }
 
     @GetMapping("/api/v1/contracts")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'UNDERWRITER')")
-    PagedModel<ContractResponse> list(
-            @ParameterObject ContractFilter filter,
-            @ParameterObject @PageableDefault(size = 20, sort = "issuedAt", direction = Sort.Direction.DESC)
-            Pageable pageable,
-            Authentication authentication) {
+    PagedModel<ContractResponse> list(@ParameterObject ContractFilter filter,
+                                      @ParameterObject
+                                      @PageableDefault(
+                                              size = 20,
+                                              sort = "issuedAt",
+                                              direction = Sort.Direction.DESC)
+                                      Pageable pageable,
+                                      Authentication authentication) {
 
         SortWhitelist.requireAllowed(pageable, SORTABLE_PROPERTIES);
         Page<ContractDetails> page = Roles.isUnderwriter(authentication)
