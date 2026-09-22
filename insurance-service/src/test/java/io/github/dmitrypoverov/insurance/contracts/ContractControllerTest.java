@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.test.web.servlet.client.EntityExchangeResult;
 import org.springframework.test.web.servlet.client.RestTestClient;
 import org.springframework.transaction.support.TransactionTemplate;
 
@@ -70,6 +71,25 @@ class ContractControllerTest extends IntegrationTest {
         assertThat(registrations).hasSize(1);
         assertThat(registrations.getFirst().getContractId()).isEqualTo(contracts.getFirst().getId());
         assertThat(registrations.getFirst().getStatus()).isEqualTo(RegistrationStatus.PENDING);
+    }
+
+    @Test
+    void issue_approvedApplication_locationPointsToIssuedContract() {
+        UUID applicationId = saveApprovedApplication();
+        EntityExchangeResult<String> issued = issueContract(applicationId)
+                .expectStatus().isCreated()
+                .returnResult(String.class);
+
+        String location = issued.getResponseHeaders().getFirst(HttpHeaders.LOCATION);
+        assertThat(location).isNotNull();
+
+        client.get()
+                .uri(location)
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.contractId").isEqualTo(JsonPath.read(issued.getResponseBody(), "$.contractId"));
     }
 
     @Test

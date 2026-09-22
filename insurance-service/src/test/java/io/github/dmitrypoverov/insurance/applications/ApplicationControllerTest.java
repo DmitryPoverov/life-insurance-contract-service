@@ -2,6 +2,7 @@ package io.github.dmitrypoverov.insurance.applications;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.jayway.jsonpath.JsonPath;
 import io.github.dmitrypoverov.insurance.support.IntegrationTest;
 import io.github.dmitrypoverov.insurance.support.TestJwtTokens;
 import java.math.BigDecimal;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.client.EntityExchangeResult;
 
 class ApplicationControllerTest extends IntegrationTest {
 
@@ -39,6 +41,29 @@ class ApplicationControllerTest extends IntegrationTest {
                 .jsonPath("$.calculatedPremium")
                 .value(premium -> assertThat(new BigDecimal(premium.toString()))
                         .isEqualByComparingTo("65000.00"));
+    }
+
+    @Test
+    void create_withCustomerToken_locationPointsToCreatedApplication() {
+        EntityExchangeResult<String> created = client.post()
+                .uri("/api/v1/applications")
+                .header(HttpHeaders.AUTHORIZATION, bearer(CUSTOMER_SUBJECT, "customer"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(requestForAge(36))
+                .exchange()
+                .expectStatus().isCreated()
+                .returnResult(String.class);
+
+        String location = created.getResponseHeaders().getFirst(HttpHeaders.LOCATION);
+        assertThat(location).isNotNull();
+
+        client.get()
+                .uri(location)
+                .header(HttpHeaders.AUTHORIZATION, bearer(CUSTOMER_SUBJECT, "customer"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.applicationId").isEqualTo(JsonPath.read(created.getResponseBody(), "$.applicationId"));
     }
 
     @Test
