@@ -2,6 +2,7 @@ package io.github.dmitrypoverov.insurance.contracts;
 
 import io.github.dmitrypoverov.insurance.registrations.ContractRegistration;
 import io.github.dmitrypoverov.insurance.registrations.RegistrationStatus;
+import io.github.dmitrypoverov.insurance.security.CurrentUser;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaQuery;
 import jakarta.persistence.criteria.Root;
@@ -24,8 +25,15 @@ final class ContractSpecifications {
         return (root, query, cb) -> cb.equal(root.get("id"), id);
     }
 
-    static Specification<Contract> ownedBy(String policyholderSubject) {
+    private static Specification<Contract> ownedBy(String policyholderSubject) {
         return (root, query, cb) -> cb.equal(root.get("policyholderSubject"), policyholderSubject);
+    }
+
+    static Specification<Contract> visibleTo(CurrentUser user) {
+        if (user.isUnderwriter()) {
+            return Specification.unrestricted();
+        }
+        return ownedBy(user.subject());
     }
 
     static Specification<Contract> matches(ContractFilter filter) {

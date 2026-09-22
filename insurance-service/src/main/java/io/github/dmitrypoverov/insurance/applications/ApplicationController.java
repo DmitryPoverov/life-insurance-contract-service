@@ -1,6 +1,6 @@
 package io.github.dmitrypoverov.insurance.applications;
 
-import io.github.dmitrypoverov.insurance.security.Roles;
+import io.github.dmitrypoverov.insurance.security.CurrentUser;
 import io.github.dmitrypoverov.insurance.web.SortWhitelist;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +12,6 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.PagedModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -37,9 +36,9 @@ public class ApplicationController {
     @PostMapping
     @PreAuthorize("hasRole('CUSTOMER')")
     ResponseEntity<ApplicationResponse> create(@Valid @RequestBody ApplicationCreateRequest request,
-                                               Authentication authentication) {
+                                               CurrentUser currentUser) {
 
-        Application application = applicationService.create(authentication.getName(), request);
+        Application application = applicationService.create(currentUser.subject(), request);
         return ResponseEntity.created(URI.create("/api/v1/applications/" + application.getId()))
                 .body(applicationMapper.toResponse(application));
     }
@@ -53,32 +52,28 @@ public class ApplicationController {
                                                  sort = "createdAt",
                                                  direction = Sort.Direction.DESC)
                                          Pageable pageable,
-                                         Authentication authentication) {
+                                         CurrentUser currentUser) {
 
         SortWhitelist.requireAllowed(pageable, SORTABLE_PROPERTIES);
-        Page<Application> page = Roles.isUnderwriter(authentication)
-                ? applicationService.findAny(filter, pageable)
-                : applicationService.findOwn(authentication.getName(), filter, pageable);
+        Page<Application> page = applicationService.find(currentUser, filter, pageable);
         return new PagedModel<>(page.map(applicationMapper::toResponse));
     }
 
     @GetMapping("/{applicationId}")
     @PreAuthorize("hasAnyRole('CUSTOMER', 'UNDERWRITER')")
     ApplicationResponse getById(@PathVariable UUID applicationId,
-                                Authentication authentication) {
+                                CurrentUser currentUser) {
 
-        Application application = Roles.isUnderwriter(authentication)
-                ? applicationService.getAnyById(applicationId)
-                : applicationService.getOwnById(applicationId, authentication.getName());
+        Application application = applicationService.getById(applicationId, currentUser);
         return applicationMapper.toResponse(application);
     }
 
     @PostMapping("/{applicationId}/approve")
     @PreAuthorize("hasRole('UNDERWRITER')")
     ApplicationResponse approve(@PathVariable UUID applicationId,
-                                Authentication authentication) {
+                                CurrentUser currentUser) {
 
-        Application approved = applicationService.approve(applicationId, authentication.getName());
+        Application approved = applicationService.approve(applicationId, currentUser.subject());
         return applicationMapper.toResponse(approved);
     }
 
@@ -86,9 +81,9 @@ public class ApplicationController {
     @PreAuthorize("hasRole('UNDERWRITER')")
     ApplicationResponse reject(@PathVariable UUID applicationId,
                                @Valid @RequestBody ApplicationRejectRequest request,
-                               Authentication authentication) {
+                               CurrentUser currentUser) {
 
-        Application rejected = applicationService.reject(applicationId, authentication.getName(), request.reason());
+        Application rejected = applicationService.reject(applicationId, currentUser.subject(), request.reason());
         return applicationMapper.toResponse(rejected);
     }
 }

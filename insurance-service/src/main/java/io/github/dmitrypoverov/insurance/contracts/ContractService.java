@@ -2,11 +2,11 @@ package io.github.dmitrypoverov.insurance.contracts;
 
 import io.github.dmitrypoverov.insurance.registrations.ContractRegistration;
 import io.github.dmitrypoverov.insurance.registrations.ContractRegistrationRepository;
+import io.github.dmitrypoverov.insurance.security.CurrentUser;
 import io.github.dmitrypoverov.insurance.web.Paging;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,7 +20,7 @@ import java.util.stream.Collectors;
 
 import static io.github.dmitrypoverov.insurance.contracts.ContractSpecifications.hasId;
 import static io.github.dmitrypoverov.insurance.contracts.ContractSpecifications.matches;
-import static io.github.dmitrypoverov.insurance.contracts.ContractSpecifications.ownedBy;
+import static io.github.dmitrypoverov.insurance.contracts.ContractSpecifications.visibleTo;
 
 @Service
 @RequiredArgsConstructor
@@ -31,41 +31,34 @@ public class ContractService {
     private final Clock clock;
 
     @Transactional(readOnly = true)
-    public ContractDetails getOwnById(UUID id, String policyholderSubject) {
-        Contract contract = contractRepository.findOne(hasId(id).and(ownedBy(policyholderSubject)))
+    public ContractDetails getById(UUID id,
+                                   CurrentUser currentUser) {
+
+        Contract contract = contractRepository
+                .findOne(hasId(id).and(visibleTo(currentUser)))
                 .orElseThrow(() -> new ContractNotFoundException(id));
         return withRegistration(contract);
     }
 
     @Transactional(readOnly = true)
-    @PreAuthorize("hasRole('UNDERWRITER')")
-    public ContractDetails getAnyById(UUID id) {
-        Contract contract = contractRepository.findById(id)
-                .orElseThrow(() -> new ContractNotFoundException(id));
-        return withRegistration(contract);
-    }
+    public Page<ContractDetails> find(CurrentUser currentUser,
+                                      ContractFilter filter,
+                                      Pageable pageable) {
 
-    @Transactional(readOnly = true)
-    public Page<ContractDetails> findOwn(String policyholderSubject, ContractFilter filter, Pageable pageable) {
-        Page<Contract> contracts = contractRepository.findAll(
-                ownedBy(policyholderSubject).and(matches(filter)), Paging.withStableOrder(pageable));
-        return withRegistrations(contracts);
-    }
-
-    @Transactional(readOnly = true)
-    @PreAuthorize("hasRole('UNDERWRITER')")
-    public Page<ContractDetails> findAny(ContractFilter filter, Pageable pageable) {
-        Page<Contract> contracts = contractRepository.findAll(matches(filter), Paging.withStableOrder(pageable));
+        Page<Contract> contracts = contractRepository
+                .findAll(visibleTo(currentUser).and(matches(filter)), Paging.withStableOrder(pageable));
         return withRegistrations(contracts);
     }
 
     @Transactional(readOnly = true)
     public ContractDetails detailsOf(Contract contract) {
+
         return withRegistration(contract);
     }
 
     @Transactional
     public ContractDetails retryRegistration(UUID contractId) {
+
         Contract contract = contractRepository.findById(contractId)
                 .orElseThrow(() -> new ContractNotFoundException(contractId));
         ContractRegistration registration = contractRegistrationRepository.findWithLockByContractId(contractId)
@@ -75,12 +68,14 @@ public class ContractService {
     }
 
     private ContractDetails withRegistration(Contract contract) {
+
         ContractRegistration registration = contractRegistrationRepository.findByContractId(contract.getId())
                 .orElseThrow(() -> missingRegistration(contract.getId()));
         return new ContractDetails(contract, registration);
     }
 
     private Page<ContractDetails> withRegistrations(Page<Contract> contracts) {
+
         List<UUID> contractIds = contracts.map(Contract::getId).toList();
         Map<UUID, ContractRegistration> registrationsByContractId = contractRegistrationRepository
                 .findByContractIdIn(contractIds).stream()
@@ -92,6 +87,7 @@ public class ContractService {
 
     private static ContractRegistration registrationOf(UUID contractId,
                                                        Map<UUID, ContractRegistration> registrationsByContractId) {
+
         ContractRegistration registration = registrationsByContractId.get(contractId);
         if (registration == null) {
             throw missingRegistration(contractId);
@@ -100,6 +96,7 @@ public class ContractService {
     }
 
     private static IllegalStateException missingRegistration(UUID contractId) {
+
         return new IllegalStateException("Contract %s has no registration record".formatted(contractId));
     }
 }

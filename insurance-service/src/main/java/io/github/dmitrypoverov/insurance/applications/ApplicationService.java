@@ -1,10 +1,10 @@
 package io.github.dmitrypoverov.insurance.applications;
 
+import io.github.dmitrypoverov.insurance.security.CurrentUser;
 import io.github.dmitrypoverov.insurance.web.Paging;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,7 +16,7 @@ import java.util.UUID;
 
 import static io.github.dmitrypoverov.insurance.applications.ApplicationSpecifications.hasId;
 import static io.github.dmitrypoverov.insurance.applications.ApplicationSpecifications.matches;
-import static io.github.dmitrypoverov.insurance.applications.ApplicationSpecifications.ownedBy;
+import static io.github.dmitrypoverov.insurance.applications.ApplicationSpecifications.visibleTo;
 
 @Service
 @RequiredArgsConstructor
@@ -70,41 +70,27 @@ public class ApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public Application getOwnById(UUID id,
-                                  String applicantSubject) {
+    public Application getById(UUID id,
+                               CurrentUser currentUser) {
 
-        return applicationRepository.findOne(hasId(id).and(ownedBy(applicantSubject)))
+        return applicationRepository
+                .findOne(hasId(id).and(visibleTo(currentUser)))
                 .orElseThrow(() -> new ApplicationNotFoundException(id));
     }
 
     @Transactional(readOnly = true)
-    @PreAuthorize("hasRole('UNDERWRITER')")
-    public Application getAnyById(UUID id) {
+    public Page<Application> find(CurrentUser currentUser,
+                                  ApplicationFilter filter,
+                                  Pageable pageable) {
 
-        return applicationRepository.findById(id)
-                .orElseThrow(() -> new ApplicationNotFoundException(id));
-    }
-
-    @Transactional(readOnly = true)
-    public Page<Application> findOwn(String applicantSubject,
-                                     ApplicationFilter filter,
-                                     Pageable pageable) {
-
-        return applicationRepository.findAll(
-                ownedBy(applicantSubject).and(matches(filter)), Paging.withStableOrder(pageable));
-    }
-
-    @Transactional(readOnly = true)
-    @PreAuthorize("hasRole('UNDERWRITER')")
-    public Page<Application> findAny(ApplicationFilter filter,
-                                     Pageable pageable) {
-
-        return applicationRepository.findAll(matches(filter), Paging.withStableOrder(pageable));
+        return applicationRepository
+                .findAll(visibleTo(currentUser).and(matches(filter)), Paging.withStableOrder(pageable));
     }
 
     private Application lockApplication(UUID id) {
 
-        return applicationRepository.findWithLockById(id)
+        return applicationRepository
+                .findWithLockById(id)
                 .orElseThrow(() -> new ApplicationNotFoundException(id));
     }
 }

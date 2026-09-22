@@ -318,6 +318,20 @@ class ContractControllerTest extends IntegrationTest {
     }
 
     @Test
+    void list_underwriter_returnsAllContracts() {
+        saveIssuedContract(CUSTOMER_SUBJECT);
+        saveIssuedContract(OTHER_CUSTOMER_SUBJECT);
+
+        client.get()
+                .uri("/api/v1/contracts")
+                .header(HttpHeaders.AUTHORIZATION, bearer(UNDERWRITER_SUBJECT, "underwriter"))
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.page.totalElements").isEqualTo(2);
+    }
+
+    @Test
     void list_withRegistrationStatusFilter_returnsMatchingOnly() {
         saveIssuedContract(CUSTOMER_SUBJECT);
 

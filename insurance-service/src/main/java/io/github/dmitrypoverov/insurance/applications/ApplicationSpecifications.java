@@ -1,5 +1,6 @@
 package io.github.dmitrypoverov.insurance.applications;
 
+import io.github.dmitrypoverov.insurance.security.CurrentUser;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
 import org.jspecify.annotations.Nullable;
@@ -19,8 +20,15 @@ final class ApplicationSpecifications {
         return (root, query, cb) -> cb.equal(root.get("id"), id);
     }
 
-    static Specification<Application> ownedBy(String applicantSubject) {
+    private static Specification<Application> ownedBy(String applicantSubject) {
         return (root, query, cb) -> cb.equal(root.get("applicantSubject"), applicantSubject);
+    }
+
+    static Specification<Application> visibleTo(CurrentUser user) {
+        if (user.isUnderwriter()) {
+            return Specification.unrestricted();
+        }
+        return ownedBy(user.subject());
     }
 
     static Specification<Application> matches(ApplicationFilter filter) {
